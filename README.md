@@ -1,16 +1,110 @@
+
 # bloop
 
-A new Flutter project.
+A small, personal to-do application built with Flutter.
 
-## Getting Started
+This app was created primarily for my girlfriend to keep track of what she needs to do and when she needs to do it during college. I plan to maintain this project for as long as she is in college and actively using it.
 
-This project is a starting point for a Flutter application.
+This is not a commercial product, not a startup idea, and not a polished productivity app. It is a simple, honest utility built quickly to solve a real, personal problem.
 
-A few resources to get you started if this is your first Flutter project:
+---
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## About the Project
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Built in **one night (approximately 3-4 hours),**, hence certainly NOT polished
+- Focused on simplicity and reliability
+- Local-first, no account or cloud dependency
+- Designed to be easy to extend later
+
+Because of the short build time, the app is **not fully furnished** and intentionally avoids over-engineering.
+
+---
+
+## Current Features
+
+- Create, edit, and delete tasks
+- Optional date and time for tasks
+- Priority levels (Low / Medium / High)
+- Mark tasks as completed
+- Completed tasks are removed from the main list but stored separately
+- Clean and minimal UI
+- Fully offline
+- Local data persistence
+
+---
+
+## Known Limitations
+
+The following features are present in the UI but **do not work yet** and will be implemented later:
+
+- ❌ Notifications / reminders
+- ❌ Tags page and tag-based filtering
+
+Everything else in the app works as intended.
+
+---
+
+## Required Permissions
+
+- Set Exact Alarms(Android 13+)
+- Allow notifications
+
+---
+
+
+## Tech Stack
+
+- Flutter
+- Localized Notifications(since I'm based in Kolkata, India, this project contains traces of localization defaults to that)
+- Local storage (Hive)
+
+No backend, no authentication, no cloud sync.
+
+---
+
+## Project Status
+
+This project is actively maintained but intentionally kept simple.
+
+Updates will be made:
+- When bugs are found
+- When my girlfriend needs new features
+- When there is free time to improve stability or UX
+
+There is no fixed roadmap or release schedule.
+
+---
+
+## Download
+
+Signed APK builds will be provided here.
+
+| Version | Platform | Download Link | SHA-256 |
+|-------|---------|---------------|--------|
+| v1.0.0 | Android | _Coming soon_ | _TBD_ |
+
+---
+
+## Build Notes
+
+- This app was built quickly as a functional prototype
+- Code prioritizes clarity over abstraction
+- Some parts may be refactored later as features grow
+- Not optimized for scale or large datasets
+
+---
+
+## License
+
+This project is personal and shared for reference and learning purposes, or if you want to contribute.
+
+Use, fork, or modify at your own discretion.
+
+---
+
+## Final Note
+
+This app exists because it was needed, not because it was planned.
+
+Thank you for your interests.
+
