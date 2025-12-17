@@ -37,8 +37,9 @@ Because of the short build time, the app is **not fully furnished** and intentio
 
 The following features are present in the UI but **do not work yet** and will be implemented later:
 
-- ❌ Notifications / reminders
-- ❌ Tags page and tag-based filtering
+- [x] Notifications / reminders
+- [ ] Tags page and tag-based filtering
+
 
 Everything else in the app works as intended.
 
@@ -67,7 +68,7 @@ No backend, no authentication, no cloud sync.
 This project is actively maintained but intentionally kept simple.
 
 Updates will be made:
-- When bugs are found
+- When lethal bugs are found
 - When my girlfriend needs new features
 - When there is free time to improve stability or UX
 
@@ -79,9 +80,9 @@ There is no fixed roadmap or release schedule.
 
 Signed APK builds will be provided here.
 
-| Version | Platform | Download Link | SHA |
+| Version | Platform | Release Link | SHA |
 |-------|---------|---------------|--------|
-| v1.0.0 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/tag/PreRelease)_ | _[SHA](https://github.com/saad-mh/bloop/releases/download/PreRelease/bloop-signed.apk.sha1)_ |
+| v1.0.0 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/tag/Release)_ | _[SHA](https://github.com/saad-mh/bloop/releases/download/Release/bloop1.0.1.apk.sha1)_ |
 
 ---
 

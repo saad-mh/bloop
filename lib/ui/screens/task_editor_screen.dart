@@ -108,13 +108,24 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       updatedAt: DateTime.now().toUtc(),
     );
 
+    if (task.dueDateTime != null && task.reminderBefore != null) {
+      final scheduled = task.dueDateTime!.subtract(task.reminderBefore!);
+      if (scheduled.isBefore(DateTime.now())) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Scheduled reminder is in the past. Please choose a future time.')),
+        );
+        return;
+      }
+    }
+
     final newId = await ref.read(taskListProvider.notifier).addOrUpdate(task);
     if (!mounted) return;
     if (newId == null) {
       final snack = ScaffoldMessenger.of(context);
       snack.showSnackBar(
         SnackBar(
-          content: const Text('Reminder not scheduled — check permissions'),
+          content: const Text('Some required permissions are missing.'),
           action: SnackBarAction(
             label: 'Open settings',
             onPressed: () async {
@@ -138,9 +149,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       appBar: AppBar(
         title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
+          TextButton(
             onPressed: _save,
+            child: const Text('Save Task'),
           ),
         ],
       ),

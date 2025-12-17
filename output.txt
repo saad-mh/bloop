@@ -1,0 +1,445 @@
+PS C:\Users\saada> adb shell dumpsys notification --noredact > dumpsys_notification.txt
+PS C:\Users\saada> Select-String -Path dumpsys_notification.txt -Pattern "bloop_tasks","task_reminder_b","Task Reminders"
+
+dumpsys_notification.txt:426:        NotificationChannel{mId='task_reminder_b', mName=Task Reminder B,
+mDescription=hasDescription , mImportance=5, mBypassDnd=false, mLockscreenVisibility=-1000,
+mSound=content://settings/system/notification_sound, mLights=false, mLightColor=0, mVibrationPattern=null,
+mVibrationEffect=null, mUserLockedFields=0, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true,
+mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION
+content=CONTENT_TYPE_UNKNOWN flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false,
+mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=5, mParent=null, mConversationId=null,
+mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=1766003660540}
+dumpsys_notification.txt:427:        NotificationChannel{mId='bloop_tasks', mName=Task Reminders,
+mDescription=hasDescription , mImportance=4, mBypassDnd=false, mLockscreenVisibility=-1000,
+mSound=content://settings/system/notification_sound, mLights=false, mLightColor=0, mVibrationPattern=null,
+mVibrationEffect=null, mUserLockedFields=0, mUserVisibleTaskShown=false, mVibrationEnabled=true, mShowBadge=true,
+mDeleted=false, mDeletedTimeMs=-1, mGroup='null', mAudioAttributes=AudioAttributes: usage=USAGE_NOTIFICATION
+content=CONTENT_TYPE_UNKNOWN flags=0x800(FLAG_MUTE_HAPTIC)  tags= bundle=null, mBlockableSystem=false,
+mAllowBubbles=-1, mImportanceLockedDefaultApp=false, mOriginalImp=4, mParent=null, mConversationId=null,
+mDemoted=false, mImportantConvo=false, mLastNotificationUpdateTimeMs=0}
+
+PS C:\Users\saada> adb logcat -v time | Select-String -Pattern "dexterous","NotificationService","NotifService","ScheduledNotificationReceiver","NotificationManager","AlarmManager"
+
+12-17 00:17:15.264 D/SystemServerTiming(  808): StartAlarmManagerService
+12-17 00:17:15.264 I/SystemServiceManager(  808): Starting com.android.server.alarm.AlarmManagerService
+12-17 00:17:15.288 D/SystemServerTiming(  808): OnBootPhase_200_com.android.server.alarm.AlarmManagerService
+12-17 00:17:15.784 D/SystemServerTiming(  808): StartNotificationManager
+12-17 00:17:15.784 I/SystemServiceManager(  808): Starting com.android.server.notification.NotificationManagerService
+12-17 00:17:15.804 W/ContextImpl(  808): Calling a method in the system process without a qualified user:
+android.app.ContextImpl.sendBroadcastMultiplePermissions:1391
+android.content.Context.sendBroadcastMultiplePermissions:2741
+com.android.server.notification.NotificationManagerService.sendRegisteredOnlyBroadcast:3452
+com.android.server.notification.NotificationManagerService.-$$Nest$msendRegisteredOnlyBroadcast:0
+com.android.server.notification.NotificationManagerService$7.lambda$onPolicyChanged$1:2896
+12-17 00:17:15.805 W/ContextImpl(  808): Calling a method in the system process without a qualified user:
+android.app.ContextImpl.sendBroadcastMultiplePermissions:1391
+android.content.Context.sendBroadcastMultiplePermissions:2741
+com.android.server.notification.NotificationManagerService.sendRegisteredOnlyBroadcast:3452
+com.android.server.notification.NotificationManagerService.-$$Nest$msendRegisteredOnlyBroadcast:0
+com.android.server.notification.NotificationManagerService$7.lambda$onConsolidatedPolicyChanged$2:2906
+12-17 00:17:15.818 I/NotificationManagerService.NotificationListeners(  808): Read notification listener permissions
+from xml
+12-17 00:17:15.819 V/NotificationManagerService.NotificationListeners(  808): enabling notification listener for 0:
+ComponentInfo{com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener}
+12-17 00:17:15.819 V/NotificationManagerService.NotificationListeners(  808): binding: Intent {
+act=android.service.notification.NotificationListenerService
+cmp=com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener (has extras) }
+12-17 00:17:15.819 W/NotificationManagerService.NotificationListeners(  808): Unable to bind notification listener
+service: Intent { act=android.service.notification.NotificationListenerService xflg=0x4
+cmp=com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener (has extras) } in
+user 0
+12-17 00:17:15.819 V/NotificationManagerService.NotificationListeners(  808): enabling notification listener for 0: Com
+ponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationListe
+nerService}
+12-17 00:17:15.819 V/NotificationManagerService.NotificationListeners(  808): binding: Intent {
+act=android.service.notification.NotificationListenerService cmp=com.google.android.as/com.google.android.apps.miphone.
+aiai.common.notification.service.AiAiNotificationListenerService (has extras) }
+12-17 00:17:15.819 W/NotificationManagerService.NotificationListeners(  808): Unable to bind notification listener
+service: Intent { act=android.service.notification.NotificationListenerService xflg=0x4 cmp=com.google.android.as/com.g
+oogle.android.apps.miphone.aiai.common.notification.service.AiAiNotificationListenerService (has extras) } in user 0
+12-17 00:17:15.820 I/NotificationManagerService.NotificationAssistants(  808): Read notification assistant permissions
+from xml
+12-17 00:17:15.820 V/NotificationManagerService.NotificationAssistants(  808): enabling notification assistant for 0: C
+omponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationAss
+istantService}
+12-17 00:17:15.820 V/NotificationManagerService.NotificationAssistants(  808): binding: Intent {
+act=android.service.notification.NotificationAssistantService cmp=com.google.android.as/com.google.android.apps.miphone
+.aiai.common.notification.service.AiAiNotificationAssistantService (has extras) }
+12-17 00:17:15.820 W/NotificationManagerService.NotificationAssistants(  808): Unable to bind notification assistant
+service: Intent { act=android.service.notification.NotificationAssistantService xflg=0x4 cmp=com.google.android.as/com.
+google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationAssistantService (has extras) } in user 0
+12-17 00:17:15.820 D/NotificationManagerService.NotificationAssistants(  808): Approving default notification
+assistant for user 0
+12-17 00:17:15.935 I/SystemServiceManager(  808): Starting com.android.server.SensorNotificationService
+12-17 00:17:16.086 D/SystemServerTiming(  808): OnBootPhase_480_com.android.server.alarm.AlarmManagerService
+12-17 00:17:16.093 D/SystemServerTiming(  808):
+OnBootPhase_480_com.android.server.notification.NotificationManagerService
+12-17 00:17:16.094 D/SystemServerTiming(  808): OnBootPhase_480_com.android.server.SensorNotificationService
+12-17 00:17:16.151 D/SystemServerTiming(  808): OnBootPhase_500_com.android.server.alarm.AlarmManagerService
+12-17 00:17:16.190 D/SystemServerTiming(  808):
+OnBootPhase_500_com.android.server.notification.NotificationManagerService
+12-17 00:17:16.218 D/SystemServerTiming(  808): OnBootPhase_500_com.android.server.SensorNotificationService
+12-17 00:17:16.395 D/SystemServerTiming(  808): OnBootPhase_520_com.android.server.alarm.AlarmManagerService
+12-17 00:17:16.396 D/SystemServerTiming(  808):
+OnBootPhase_520_com.android.server.notification.NotificationManagerService
+12-17 00:17:16.411 D/SystemServerTiming(  808): OnBootPhase_520_com.android.server.SensorNotificationService
+12-17 00:17:16.505 D/SystemServerTiming(  808): OnBootPhase_550_com.android.server.alarm.AlarmManagerService
+12-17 00:17:16.641 D/SystemServerTiming(  808):
+OnBootPhase_550_com.android.server.notification.NotificationManagerService
+12-17 00:17:16.686 D/SystemServerTiming(  808): OnBootPhase_550_com.android.server.SensorNotificationService
+12-17 00:17:16.852 D/SystemServerTiming(  808): OnBootPhase_600_com.android.server.alarm.AlarmManagerService
+12-17 00:17:16.857 D/SystemServerTiming(  808):
+OnBootPhase_600_com.android.server.notification.NotificationManagerService
+12-17 00:17:17.007 D/SystemServerTiming(  808): OnBootPhase_600_com.android.server.SensorNotificationService
+12-17 00:17:17.036 D/SystemServerTimingAsync(  808): ssm.onStartUser-0_com.android.server.alarm.AlarmManagerService
+12-17 00:17:17.060 D/SystemServerTimingAsync(  808):
+ssm.onStartUser-0_com.android.server.notification.NotificationManagerService
+12-17 00:17:17.063 D/SystemServerTimingAsync(  808): ssm.onStartUser-0_com.android.server.SensorNotificationService
+12-17 00:17:18.430 D/ActivityManagerTiming(  808): OnBootPhase_1000_com.android.server.alarm.AlarmManagerService
+12-17 00:17:18.451 D/ActivityManagerTiming(  808):
+OnBootPhase_1000_com.android.server.notification.NotificationManagerService
+12-17 00:17:18.455 D/ActivityManagerTiming(  808): OnBootPhase_1000_com.android.server.SensorNotificationService
+12-17 00:17:18.735 D/SystemServerTimingAsync(  808): ssm.onUnlockingUser-0_com.android.server.alarm.AlarmManagerService
+12-17 00:17:18.854 D/SystemServerTimingAsync(  808):
+ssm.onUnlockingUser-0_com.android.server.notification.NotificationManagerService
+12-17 00:17:18.866 D/SystemServerTimingAsync(  808): ssm.onUnlockingUser-0_com.android.server.SensorNotificationService
+12-17 00:17:19.003 D/SystemServerTimingAsync(  808): ssm.onUnlockedUser-0_com.android.server.alarm.AlarmManagerService
+12-17 00:17:19.022 D/SystemServerTimingAsync(  808):
+ssm.onUnlockedUser-0_com.android.server.notification.NotificationManagerService
+12-17 00:17:19.029 D/SystemServerTimingAsync(  808): ssm.onUnlockedUser-0_com.android.server.SensorNotificationService
+12-17 00:17:19.149 V/NotificationManagerService.NotificationAssistants(  808): enabling notification assistant for 0: C
+omponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationAss
+istantService}
+12-17 00:17:19.149 V/NotificationManagerService.NotificationAssistants(  808): binding: Intent {
+act=android.service.notification.NotificationAssistantService cmp=com.google.android.as/com.google.android.apps.miphone
+.aiai.common.notification.service.AiAiNotificationAssistantService (has extras) }
+12-17 00:17:19.161 V/NotificationManagerService.NotificationListeners(  808): enabling notification listener for 0:
+ComponentInfo{com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener}
+12-17 00:17:19.161 V/NotificationManagerService.NotificationListeners(  808): binding: Intent {
+act=android.service.notification.NotificationListenerService
+cmp=com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener (has extras) }
+12-17 00:17:19.181 V/NotificationManagerService.NotificationListeners(  808): enabling notification listener for 0: Com
+ponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNotificationListe
+nerService}
+12-17 00:17:19.181 V/NotificationManagerService.NotificationListeners(  808): binding: Intent {
+act=android.service.notification.NotificationListenerService cmp=com.google.android.as/com.google.android.apps.miphone.
+aiai.common.notification.service.AiAiNotificationListenerService (has extras) }
+12-17 00:17:19.984 V/NotificationManagerService.NotificationAssistants(  808): 0 notification assistant service
+connected: ComponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNot
+ificationAssistantService}
+12-17 00:17:20.385 V/NotificationManagerService.NotificationListeners(  808): 0 notification listener service
+connected: ComponentInfo{com.google.android.apps.nexuslauncher/com.android.launcher3.notification.NotificationListener}
+12-17 00:17:20.414 V/NotificationManagerService.NotificationListeners(  808): 0 notification listener service
+connected: ComponentInfo{com.google.android.as/com.google.android.apps.miphone.aiai.common.notification.service.AiAiNot
+ificationListenerService}
+12-17 00:17:22.375 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.android.systemui|1397773634|public:253,80|10186
+12-17 00:17:24.181 D/SystemServerTimingAsync(  808):
+ssm.onCompletedEventUser-0_{|Unlocked|}_com.android.server.alarm.AlarmManagerService
+12-17 00:17:24.225 D/SystemServerTimingAsync(  808):
+ssm.onCompletedEventUser-0_{|Unlocked|}_com.android.server.notification.NotificationManagerService
+12-17 00:17:24.227 D/SystemServerTimingAsync(  808):
+ssm.onCompletedEventUser-0_{|Unlocked|}_com.android.server.SensorNotificationService
+12-17 00:17:31.701 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.messaging|174344743|null|10146
+12-17 00:17:35.852 W/Looper  (  808): Slow delivery took 271ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler c=null m=8
+12-17 00:29:33.413 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483647|null|10105
+12-17 00:29:37.424 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@308ced5
+12-17 00:53:13.532 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-17 00:59:19.602 W/AlarmManager(  808): Package com.saadm.bloop, uid 10222 lost permission to set exact alarms!
+12-17 00:59:33.929 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483646|null|10105
+12-17 00:59:37.987 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@c7d97ce
+12-17 01:01:22.112 W/AlarmManager(  808): Package com.saadm.bloop, uid 10222 lost permission to set exact alarms!
+12-17 01:01:34.590 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483645|null|10105
+12-17 01:01:38.455 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@5457527
+12-17 01:01:42.290 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-17 01:05:28.935 W/AlarmManager(  808): Package com.saadm.bloop, uid 10223 lost permission to set exact alarms!
+12-17 01:08:18.907 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-17 01:09:04.853 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483644|null|10105
+12-17 01:09:08.797 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@6996399
+12-17 01:09:18.049 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483643|null|10105
+12-17 01:09:22.144 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@19e0118
+12-17 01:12:52.822 W/NotificationService(  808): Toast already killed. pkg=android token=android.os.Binder@4eb6ac4
+12-17 02:31:52.718 W/Looper  (  808): Slow delivery took 329ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.alarm.AlarmManagerService$AlarmHandler c=null m=11
+12-17 10:33:04.177 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483642|null|10105
+12-17 10:33:08.118 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@58bb5ec
+12-17 10:33:13.645 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-17 23:42:48.489 W/Looper  (  808): Slow delivery took 217ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.alarm.AlarmManagerService$AlarmHandler
+c=android.app.ActivityManager$2$$ExternalSyntheticLambda0@8f3e2d9 m=0
+12-17 23:57:55.608 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483641|null|10105
+12-17 23:57:59.942 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@ff146ef
+12-18 00:22:25.097 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483640|null|10105
+12-18 00:22:29.059 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@70fd277
+12-18 00:29:54.883 W/AlarmManager(  808): Package com.saadm.bloop, uid 10230 lost permission to set exact alarms!
+12-18 00:32:28.764 W/AlarmManager(  808): Package com.saadm.bloop, uid 10230 lost permission to set exact alarms!
+12-18 00:32:51.124 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483639|null|10105
+12-18 00:32:54.836 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@9fb946d
+12-18 00:32:59.042 W/Looper  (  808): Slow dispatch took 103ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler
+c=com.android.server.notification.NotificationManagerService$CancelNotificationRunnable@632eabd m=0
+12-18 00:32:59.908 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-18 00:35:26.141 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483638|null|10105
+12-18 00:35:30.120 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@7ee4a0f
+12-18 00:35:36.711 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-18 01:13:43.609 W/AlarmManager(  808): Package com.android.vending, uid 10145 lost permission to set exact alarms!
+12-18 01:14:39.494 W/AlarmManager(  808): Package com.google.android.webview, uid 10172 lost permission to set exact
+alarms!
+12-18 01:14:49.737 W/AlarmManager(  808): Package com.google.android.as.oss, uid 10136 lost permission to set exact
+alarms!
+12-18 01:15:09.863 W/AlarmManager(  808): Package com.android.chrome, uid 10154 lost permission to set exact alarms!
+12-18 01:15:17.334 W/AlarmManager(  808): Package com.google.android.apps.restore, uid 10140 lost permission to set
+exact alarms!
+12-18 01:15:20.011 W/AlarmManager(  808): Package com.google.android.partnersetup, uid 10144 lost permission to set
+exact alarms!
+12-18 01:15:32.685 W/AlarmManager(  808): Package com.google.android.tts, uid 10157 lost permission to set exact
+alarms!
+12-18 01:16:05.165 W/AlarmManager(  808): Package com.google.android.apps.photos, uid 10162 lost permission to set
+exact alarms!
+12-18 01:16:17.950 W/AlarmManager(  808): Package com.google.android.apps.youtube.music, uid 10174 lost permission to
+set exact alarms!
+12-18 01:16:22.591 W/AlarmManager(  808): Package com.google.android.apps.docs, uid 10155 lost permission to set exact
+alarms!
+12-18 01:16:37.705 W/AlarmManager(  808): Package com.google.android.dialer, uid 10138 lost permission to set exact
+alarms!
+12-18 01:17:09.305 W/AlarmManager(  808): Package com.google.android.apps.maps, uid 10159 lost permission to set exact
+alarms!
+12-18 01:17:21.922 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:17:31.886 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_CONN_ALARM type: 2 triggerAtMillis:
+29394930]
+12-18 01:18:23.073 W/AlarmManager(  808): Package com.google.android.youtube, uid 10173 lost permission to set exact
+alarms!
+12-18 01:18:28.374 W/AlarmManager(  808): Package com.google.android.contacts, uid 10156 lost permission to set exact
+alarms!
+12-18 01:18:29.840 W/AlarmManager(  808): Package com.google.android.accessibility.switchaccess, uid 10169 lost
+permission to set exact alarms!
+12-18 01:18:54.825 W/AlarmManager(  808): Package com.google.android.gm, uid 10165 lost permission to set exact alarms!
+12-18 01:19:10.648 W/AlarmManager(  808): Package com.google.android.inputmethod.latin, uid 10158 lost permission to
+set exact alarms!
+12-18 01:24:14.213 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:26:42.280 I/flutter (32063): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:27:06.020 D/NotificationManagerService.NotificationListeners(  808): Removing active service
+ComponentInfo{com.android.systemui/com.android.systemui.statusbar.NotificationListener}
+12-18 01:27:06.831 W/AlarmManager(32238): Unrecognized alarm listener
+com.android.systemui.keyguard.KeyguardSliceProvider$$ExternalSyntheticLambda2@586d142
+12-18 01:27:07.642 W/AlarmManager(32238): Unrecognized alarm listener
+com.google.android.systemui.smartspace.KeyguardZenAlarmViewController$showNextAlarm$1@c26999d
+12-18 01:27:08.525 W/AlarmManager(32238): Unrecognized alarm listener
+com.google.android.systemui.smartspace.KeyguardZenAlarmViewController$showNextAlarm$1@c26999d
+12-18 01:27:08.525 W/AlarmManager(32238): Unrecognized alarm listener
+com.google.android.systemui.smartspace.KeyguardZenAlarmViewController$showNextAlarm$1@c26999d
+12-18 01:27:08.529 W/AlarmManager(32238): Unrecognized alarm listener
+com.google.android.systemui.smartspace.KeyguardZenAlarmViewController$showNextAlarm$1@c26999d
+12-18 01:27:23.343 I/flutter (32380): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:27:33.440 I/flutter (32446): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:27:55.242 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+30888285]
+12-18 01:27:55.245 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+30888289]
+12-18 01:29:50.842 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:32:15.502 E/flutter (32643): #0      NotifService.initNotification
+(package:bloop/services/notif_service.dart:19:77)
+12-18 01:32:59.014 E/flutter (  364): #0      NotifService.initNotification
+(package:bloop/services/notif_service.dart:19:77)
+12-18 01:33:20.088 W/Looper  (  808): Slow dispatch took 133ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler c=null m=8
+12-18 01:33:23.747 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@1de4a80
+12-18 01:33:45.523 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:34:04.000 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-18 01:34:04.077 E/flutter (  953): #0      NotifService.initNotification
+(package:bloop/services/notif_service.dart:19)
+12-18 01:34:40.511 W/Looper  (  808): Slow delivery took 205ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler
+c=com.android.server.notification.NotificationManagerService$CancelNotificationRunnable@e425446 m=0
+12-18 01:34:42.696 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.apps.wellbeing|174344743|null|10151
+12-18 01:34:43.676 E/flutter ( 1369): #0      NotifService.initNotification
+(package:bloop/services/notif_service.dart:19:77)
+12-18 01:37:18.456 I/AlarmManager( 5060): setExactAndAllowWhileIdle [name: RemindersNSREFRESH_TIME_REMINDERS_ALARM
+type: 0 triggerAtMillis: 1766082600000]
+12-18 01:37:39.083 W/AlarmManager(  808): Package com.saadm.bloop, uid 10236 lost permission to set exact alarms!
+12-18 01:37:41.115 E/flutter ( 1911): #0      NotifService.initNotification
+(package:bloop/services/notif_service.dart:19:77)
+12-18 01:40:09.263 W/Looper  (  808): Slow delivery took 287ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler
+c=com.android.server.notification.NotificationManagerService$15@fbedfbf m=0
+12-18 01:40:19.467 W/AlarmManager(  808): Package com.saadm.bloop, uid 10236 lost permission to set exact alarms!
+12-18 01:40:24.500 I/flutter ( 2159): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 01:40:24.628 I/flutter ( 2159): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159): Failed to handle method call
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159): java.lang.NullPointerException:
+Attempt to invoke virtual method 'int java.lang.Integer.intValue()' on a null object reference
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+com.dexterous.flutterlocalnotifications.models.NotificationDetails.readPlatformSpecifics(NotificationDetails.java:258)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+com.dexterous.flutterlocalnotifications.models.NotificationDetails.from(NotificationDetails.java:244)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at com.dexterous.flutterlocalnoti
+fications.FlutterLocalNotificationsPlugin.extractNotificationDetails(FlutterLocalNotificationsPlugin.java:1680)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at com.dexterous.flutterlocalnoti
+fications.FlutterLocalNotificationsPlugin.zonedSchedule(FlutterLocalNotificationsPlugin.java:1606)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at com.dexterous.flutterlocalnoti
+fications.FlutterLocalNotificationsPlugin.onMethodCall(FlutterLocalNotificationsPlugin.java:1434)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+io.flutter.plugin.common.MethodChannel$IncomingMethodCallHandler.onMessage(MethodChannel.java:267)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+io.flutter.embedding.engine.dart.DartMessenger.invokeHandler(DartMessenger.java:292)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at io.flutter.embedding.engine.da
+rt.DartMessenger.lambda$dispatchMessageToQueue$0$io-flutter-embedding-engine-dart-DartMessenger(DartMessenger.java:319)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+io.flutter.embedding.engine.dart.DartMessenger$$ExternalSyntheticLambda0.run(D8$$SyntheticClass:0)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.os.Handler.handleCallback(Handler.java:1070)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.os.Handler.dispatchMessage(Handler.java:125)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.os.Looper.dispatchMessage(Looper.java:333)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.os.Looper.loopOnce(Looper.java:263)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.os.Looper.loop(Looper.java:367)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+android.app.ActivityThread.main(ActivityThread.java:9282)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+java.lang.reflect.Method.invoke(Native Method)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:566)
+12-18 01:40:28.351 E/MethodChannel#dexterous.com/flutter/local_notifications( 2159):    at
+com.android.internal.os.ZygoteInit.main(ZygoteInit.java:929)
+12-18 01:40:28.360 E/flutter ( 2159):   at
+com.dexterous.flutterlocalnotifications.models.NotificationDetails.readPlatformSpecifics(NotificationDetails.java:258)
+12-18 01:40:28.360 E/flutter ( 2159):   at
+com.dexterous.flutterlocalnotifications.models.NotificationDetails.from(NotificationDetails.java:244)
+12-18 01:40:28.360 E/flutter ( 2159):   at com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin.extra
+ctNotificationDetails(FlutterLocalNotificationsPlugin.java:1680)
+12-18 01:40:28.360 E/flutter ( 2159):   at com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin.zoned
+Schedule(FlutterLocalNotificationsPlugin.java:1606)
+12-18 01:40:28.360 E/flutter ( 2159):   at com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin.onMet
+hodCall(FlutterLocalNotificationsPlugin.java:1434)
+12-18 01:40:28.360 E/flutter ( 2159): #4      NotifService.scheduleNotification
+(package:bloop/services/notif_service.dart:128:5)
+12-18 01:40:41.340 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:43:29.666 W/AlarmManager(  808): Package com.saadm.bloop, uid 10236 lost permission to set exact alarms!
+12-18 01:43:31.454 I/flutter ( 2462): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 01:43:31.580 I/flutter ( 2462): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:44:49.135 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+30948310]
+12-18 01:44:49.438 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+31788613]
+12-18 01:44:49.531 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+31788706]
+12-18 01:44:49.535 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+31788710]
+12-18 01:47:40.397 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:48:52.475 W/Looper  (  808): Slow delivery took 264ms main app=system_server main=true group=FOREGROUND
+h=com.android.server.notification.NotificationManagerService$WorkerHandler
+c=com.android.server.notification.NotificationManagerService$15@962213c m=0
+12-18 01:48:52.511 W/AlarmManager(  808): Package com.saadm.bloop, uid 10236 lost permission to set exact alarms!
+12-18 01:48:54.231 I/flutter ( 2949): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 01:48:54.366 I/flutter ( 2949): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:50:48.995 I/flutter ( 2949): NotificationService: exact alarms not available, falling back to allowWhileIdle
+12-18 01:50:48.995 I/flutter ( 2949): NotificationService: missing due date or reminder, returning null
+12-18 01:52:11.026 I/flutter ( 3235): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 01:52:11.143 I/flutter ( 3235): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:55:30.278 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 01:56:04.557 I/flutter ( 3455): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 01:56:04.712 I/flutter ( 3455): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 01:56:08.384 I/flutter ( 3455): NotifService: pending requests=10:Test Notification
+12-18 01:56:08.385 I/flutter ( 3455): NotifService: scheduled notification id=10 for 2025-12-18 01:57:00.000+0530
+(now: 2025-12-18 01:56:08.261377+0530)
+12-18 01:57:32.595 I/flutter ( 3455): NotifService: pending requests=10:Test Notification
+12-18 01:57:32.596 I/flutter ( 3455): NotifService: scheduled notification id=10 for 2025-12-18 01:58:00.000+0530
+(now: 2025-12-18 01:57:32.588797+0530)
+12-18 01:57:52.174 I/flutter ( 3455): NotifService: pending requests=10:Test Notification
+12-18 01:57:52.174 I/flutter ( 3455): NotifService: scheduled notification id=10 for 2025-12-18 01:58:00.000+0530
+(now: 2025-12-18 01:57:52.168624+0530)
+12-18 01:58:39.602 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+32618776]
+12-18 01:58:39.603 I/AlarmManager( 1368): setExactAndAllowWhileIdle [name: GCM_HB_ALARM type: 2 triggerAtMillis:
+32618778]
+12-18 02:01:51.634 I/flutter ( 3455): NotifService: pending requests=10:Test Notification
+12-18 02:01:51.634 I/flutter ( 3455): NotifService: scheduled notification id=10 for 2025-12-18 02:02:00.000+0530
+(now: 2025-12-18 02:01:51.624021+0530)
+12-18 02:02:26.891 I/NotificationService(  808): Cannot find enqueued record for key:
+0|com.google.android.packageinstaller|-2147483636|null|10105
+12-18 02:02:30.807 W/NotificationService(  808): Toast already killed. pkg=com.google.android.packageinstaller
+token=android.os.BinderProxy@70e9435
+12-18 02:03:10.855 I/flutter ( 4203): NotifService: failed to set timezone for TimezoneInfo: Location with the name
+"TimezoneInfo" doesn't exist
+12-18 02:03:11.286 I/flutter ( 4203): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 02:03:14.988 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb
+12-18 02:03:27.164 I/flutter ( 4203): NotificationService: exact alarms not available, falling back to allowWhileIdle
+12-18 02:03:27.164 I/flutter ( 4203): NotificationService: missing due date or reminder, returning null
+12-18 02:03:55.967 I/flutter ( 4469): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 02:03:56.109 I/flutter ( 4469): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 02:04:02.307 I/flutter ( 4469): NotificationService: exact alarms not available, falling back to allowWhileIdle
+12-18 02:04:02.309 I/flutter ( 4469): NotificationService: missing due date or reminder, returning null
+12-18 02:04:18.251 I/flutter ( 4719): NotifService: failed to set timezone for TimezoneInfo(Asia/Calcutta, (locale:
+en_US, name: India Standard Time)): Location with the name "TimezoneInfo(Asia/Calcutta, (locale: en_US, name: India
+Standard Time))" doesn't exist
+12-18 02:04:18.401 I/flutter ( 4719): NotificationService: timezone normalized from Asia/Calcutta to Asia/Kolkata
+(tz.local=Asia/Kolkata)
+12-18 02:04:22.174 I/flutter ( 4719): NotifService: pending requests=10:Test Notification
+12-18 02:04:22.174 I/flutter ( 4719): NotifService: scheduled notification id=10 for 2025-12-18 02:05:00.000+0530
+(now: 2025-12-18 02:04:22.087518+0530)
+12-18 02:07:29.782 W/AlarmManager( 1142): Unrecognized alarm listener
+com.android.networkstack.android.net.ip.IpClientLinkObserver$Dhcp6PdPreferredPrefixAlarmListener@afb6ecb

@@ -1,3 +1,4 @@
+import 'package:bloop/services/notif_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -9,6 +10,8 @@ import 'ui/screens/app_shell.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final notifService = NotifService();
+  await notifService.initNotification();
   tz.initializeTimeZones();
   await StorageService.instance.init();
   await NotificationService.instance.init();

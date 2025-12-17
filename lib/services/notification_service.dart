@@ -79,6 +79,8 @@ class NotificationService {
         if (hasNotif == null || hasNotif == false) {
           final granted = await _methodChannel.invokeMethod<bool>('requestNotificationPermission');
           if (granted == null || granted == false) {
+            // ignore: avoid_print
+            print('NotificationService: notification permission denied, returning null');
             // Open notification settings as fallback
             await _methodChannel.invokeMethod('openNotificationSettings');
             return null;
@@ -98,9 +100,17 @@ class NotificationService {
         // If platform channel fails, fall back to attempting to schedule.
       }
     }
-    if (task.dueDateTime == null || task.reminderBefore == null) return null;
+    if (task.dueDateTime == null || task.reminderBefore == null) {
+      // ignore: avoid_print
+      print('NotificationService: missing due date or reminder, returning null');
+      return null;
+    }
     final scheduled = task.dueDateTime!.subtract(task.reminderBefore!);
-    if (scheduled.isBefore(DateTime.now())) return null;
+    if (scheduled.isBefore(DateTime.now())) {
+      // ignore: avoid_print
+      print('NotificationService: scheduled time is in the past ($scheduled), returning null');
+      return null;
+    }
 
     final id = task.notificationId ?? task.id.hashCode;
     // Log computed times for debugging
@@ -134,8 +144,8 @@ class NotificationService {
           'bloop_tasks',
           'Task Reminders',
           channelDescription: 'Reminders for tasks',
-          importance: fln.Importance.high,
-          priority: fln.Priority.high,
+          importance: fln.Importance.defaultImportance,
+          priority: fln.Priority.defaultPriority,
         ),
         iOS: fln.DarwinNotificationDetails(),
       ),
@@ -170,6 +180,46 @@ class NotificationService {
   Future<void> cancel(int? id) async {
     if (id == null) return;
     await _plugin.cancel(id);
+  }
+
+  /// Debug helper: show an immediate test notification on the app channel.
+  /// Use this to verify notification posting independent of AlarmManager.
+  Future<void> showTestNotification() async {
+    try {
+      // Ensure channel exists with expected importance before showing.
+      await _plugin.resolvePlatformSpecificImplementation<
+              fln.AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(const fln.AndroidNotificationChannel(
+        'bloop_tasks',
+        'Task Reminders',
+        description: 'Reminders for tasks',
+        importance: fln.Importance.high,
+      ));
+
+      // ignore: avoid_print
+      print('NotificationService: ensured channel "bloop_tasks" exists');
+
+      await _plugin.show(
+        999999,
+        'Bloop Test',
+        'This is a test notification',
+        const fln.NotificationDetails(
+          android: fln.AndroidNotificationDetails(
+            'bloop_tasks',
+            'Task Reminders',
+            channelDescription: 'Reminders for tasks',
+            importance: fln.Importance.high,
+            priority: fln.Priority.high,
+          ),
+          iOS: fln.DarwinNotificationDetails(),
+        ),
+      );
+      // ignore: avoid_print
+      print('NotificationService: test notification shown');
+    } catch (e) {
+      // ignore: avoid_print
+      print('NotificationService: failed to show test notification: $e');
+    }
   }
 
   static const MethodChannel _methodChannel = MethodChannel('bloop/permissions');
