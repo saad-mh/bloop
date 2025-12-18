@@ -22,7 +22,6 @@ class _AppShellState extends ConsumerState<AppShell> {
   final _pages = const [
     HomeScreen(),
     CompletedScreen(),
-    TagsScreen(),
     SettingsScreen(),
   ];
 
