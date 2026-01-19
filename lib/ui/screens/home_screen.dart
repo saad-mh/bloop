@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/task_provider.dart';
@@ -11,10 +12,22 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(activeTasksProvider);
+    final today = DateTime.now();
+    final formattedDate = DateFormat('EEEE, MMM d').format(today);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tasks'),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Today'),
+            Text(
+              formattedDate,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ],
+        ),
       ),
       body: tasksAsync.when(
         data: (tasks) {
