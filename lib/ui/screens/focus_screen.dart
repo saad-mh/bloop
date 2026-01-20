@@ -232,7 +232,7 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 								],
 							),
 							const SizedBox(height: 16),
-							_buildTotalTimeCard(context),
+							FocusedTodayCard(focusedDuration: _totalFocusSpent),
 						],
 					),
 				),
@@ -276,90 +276,6 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 		});
 	}
 
-class FocusedTodayCard extends StatelessWidget {
-	final Duration focusedDuration;
-	const FocusedTodayCard({Key? key, required this.focusedDuration}) : super(key: key);
-
-	@override
-	Widget build(BuildContext context) {
-		final scheme = Theme.of(context).colorScheme;
-		final textTheme = Theme.of(context).textTheme;
-		final totalMinutes = focusedDuration.inMinutes;
-		final displayText = totalMinutes < 60
-				? '${totalMinutes}m'
-				: (focusedDuration.inMinutes / 60).toStringAsFixed(1) + 'h';
-		final progress = (totalMinutes / 240).clamp(0, 1);
-
-		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-			decoration: BoxDecoration(
-				color: scheme.surface,
-				borderRadius: BorderRadius.circular(18),
-				boxShadow: [
-					BoxShadow(
-						color: scheme.shadow.withOpacity(0.06),
-						blurRadius: 16,
-						offset: const Offset(0, 6),
-					),
-				],
-			),
-			child: Row(
-				children: [
-					Container(
-						padding: const EdgeInsets.all(10),
-						decoration: BoxDecoration(
-							color: scheme.primaryContainer,
-							borderRadius: BorderRadius.circular(14),
-						),
-						child: Icon(
-							Icons.hourglass_bottom_rounded,
-							color: scheme.onPrimaryContainer,
-						),
-					),
-					const SizedBox(width: 12),
-					Expanded(
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							children: [
-								Text(
-									'Focused Today',
-									style: textTheme.titleMedium?.copyWith(
-										fontWeight: FontWeight.w600,
-									),
-								),
-								const SizedBox(height: 8),
-								Row(
-									mainAxisAlignment: MainAxisAlignment.spaceBetween,
-									children: [
-										Expanded(
-											child: ClipRRect(
-												borderRadius: BorderRadius.circular(999),
-												child: LinearProgressIndicator(
-													value: progress.toDouble(),
-													minHeight: 6,
-													backgroundColor: scheme.surfaceVariant,
-													color: scheme.primary,
-												),
-											),
-										),
-										const SizedBox(width: 12),
-										Text(
-											displayText,
-											style: textTheme.titleLarge?.copyWith(
-												fontWeight: FontWeight.w700,
-												color: scheme.onSurface,
-											),
-										),
-									],
-								),
-							],
-						),
-					),
-				],
-			),
-		);
-	}
-}
 
 	Future<void> _openSettings() async {
 		final focusController = TextEditingController(text: _focusDuration.inMinutes.toString());
@@ -606,5 +522,90 @@ enum _SessionType {
 	focus,
 	shortBreak,
 	longBreak,
+}
+
+class FocusedTodayCard extends StatelessWidget {
+	final Duration focusedDuration;
+	const FocusedTodayCard({Key? key, required this.focusedDuration}) : super(key: key);
+
+	@override
+	Widget build(BuildContext context) {
+		final scheme = Theme.of(context).colorScheme;
+		final textTheme = Theme.of(context).textTheme;
+		final totalMinutes = focusedDuration.inMinutes;
+		final displayText = totalMinutes < 60
+				? '${totalMinutes}m'
+				: (focusedDuration.inMinutes / 60).toStringAsFixed(1) + 'h';
+		final progress = (totalMinutes / 240).clamp(0, 1);
+
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+			decoration: BoxDecoration(
+				color: scheme.surface,
+				borderRadius: BorderRadius.circular(18),
+				boxShadow: [
+					BoxShadow(
+						color: scheme.shadow.withOpacity(0.06),
+						blurRadius: 16,
+						offset: const Offset(0, 6),
+					),
+				],
+			),
+			child: Row(
+				children: [
+					Container(
+						padding: const EdgeInsets.all(10),
+						decoration: BoxDecoration(
+							color: scheme.primaryContainer,
+							borderRadius: BorderRadius.circular(14),
+						),
+						child: Icon(
+							Icons.hourglass_bottom_rounded,
+							color: scheme.onPrimaryContainer,
+						),
+					),
+					const SizedBox(width: 12),
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								Text(
+									'Focused Today',
+									style: textTheme.titleMedium?.copyWith(
+										fontWeight: FontWeight.w600,
+									),
+								),
+								const SizedBox(height: 8),
+								Row(
+									mainAxisAlignment: MainAxisAlignment.spaceBetween,
+									children: [
+										Expanded(
+											child: ClipRRect(
+												borderRadius: BorderRadius.circular(999),
+												child: LinearProgressIndicator(
+													value: progress.toDouble(),
+													minHeight: 6,
+													backgroundColor: scheme.surfaceVariant,
+													color: scheme.primary,
+												),
+											),
+										),
+										const SizedBox(width: 12),
+										Text(
+											displayText,
+											style: textTheme.titleLarge?.copyWith(
+												fontWeight: FontWeight.w700,
+												color: scheme.onSurface,
+											),
+										),
+									],
+								),
+							],
+						),
+					),
+				],
+			),
+		);
+	}
 }
 

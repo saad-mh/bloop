@@ -24,7 +24,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   bool _allDay = false;
   Recurrence _recurrence = Recurrence.none;
   Priority _priority = Priority.medium;
-  Duration? _reminder;
+  final List<Duration> _reminders = [];
   final List<String> _tags = [];
 
   @override
@@ -37,7 +37,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     _allDay = task?.allDay ?? false;
     _recurrence = task?.recurrence ?? Recurrence.none;
     _priority = task?.priority ?? Priority.medium;
-    _reminder = task?.reminderBefore;
+    _reminders.addAll(task?.remindersBefore ?? []);
     _tags.addAll(task?.tags ?? []);
   }
 
@@ -89,10 +89,29 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       return;
     }
     final settings = ref.read(settingsProvider);
-    final reminder = _reminder ??
-        (settings.defaultReminderMinutes > 0
-            ? Duration(minutes: settings.defaultReminderMinutes)
-            : null);
+    final hasDueTime = _dueDateTime != null && !_allDay;
+    final maxReminders = hasDueTime ? 2 : 3;
+    final defaultReminder = settings.defaultReminderMinutes > 0
+        ? Duration(minutes: settings.defaultReminderMinutes)
+        : null;
+    final selectedReminders = _reminders.isNotEmpty
+        ? List<Duration>.from(_reminders)
+        : (defaultReminder != null ? [defaultReminder] : <Duration>[]);
+    final uniqueReminders = <int>{};
+    final reminders = <Duration>[];
+    for (final r in selectedReminders) {
+      if (uniqueReminders.add(r.inMinutes)) {
+        reminders.add(r);
+      }
+      if (reminders.length >= maxReminders) break;
+    }
+
+    if (_dueDateTime == null && reminders.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a due date to schedule reminders.')),
+      );
+      return;
+    }
 
     final task = (widget.task ?? Task(title: title)).copyWith(
       title: title,
@@ -102,26 +121,33 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       dueDateTime: _dueDateTime,
       allDay: _allDay,
       recurrence: _recurrence,
-      reminderBefore: reminder,
+      remindersBefore: reminders,
       priority: _priority,
       tags: List<String>.from(_tags),
       updatedAt: DateTime.now().toUtc(),
     );
 
-    if (task.dueDateTime != null && task.reminderBefore != null) {
-      final scheduled = task.dueDateTime!.subtract(task.reminderBefore!);
-      if (scheduled.isBefore(DateTime.now())) {
+    if (task.dueDateTime != null) {
+      final now = DateTime.now();
+      final scheduledTimes = <DateTime>[];
+      if (hasDueTime) {
+        scheduledTimes.add(task.dueDateTime!);
+      }
+      for (final reminder in reminders) {
+        scheduledTimes.add(task.dueDateTime!.subtract(reminder));
+      }
+      if (scheduledTimes.any((t) => t.isBefore(now))) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Scheduled reminder is in the past. Please choose a future time.')),
+          const SnackBar(content: Text('One or more notifications are in the past. Please choose a future time.')),
         );
         return;
       }
     }
 
-    final newId = await ref.read(taskListProvider.notifier).addOrUpdate(task);
+    final newIds = await ref.read(taskListProvider.notifier).addOrUpdate(task);
     if (!mounted) return;
-    if (newId == null) {
+    if (newIds == null && (hasDueTime || reminders.isNotEmpty)) {
       final snack = ScaffoldMessenger.of(context);
       snack.showSnackBar(
         SnackBar(
@@ -144,6 +170,20 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final dateText = _dueDateTime == null
         ? 'No date'
         : formatDueDate(_dueDateTime, allDay: _allDay);
+    final reminderOptions = <Duration>[
+      const Duration(minutes: 5),
+      const Duration(minutes: 15),
+      const Duration(minutes: 30),
+      const Duration(hours: 1),
+      const Duration(days: 1),
+    ];
+    final hasDueTime = _dueDateTime != null && !_allDay;
+    final maxReminders = hasDueTime ? 2 : 3;
+    final shownReminderCount = _reminders.isEmpty
+        ? 1
+        : (_reminders.length >= maxReminders
+            ? maxReminders
+            : _reminders.length + 1);
 
     return Scaffold(
       appBar: AppBar(
@@ -206,22 +246,57 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
               onChanged: (p) => setState(() => _priority = p ?? Priority.medium),
               decoration: const InputDecoration(labelText: 'Priority'),
             ),
-            DropdownButtonFormField<Duration?>(
-              initialValue: _reminder,
-              items: const [
-                DropdownMenuItem(value: null, child: Text('No reminder')),
-                DropdownMenuItem(
-                    value: Duration(minutes: 5), child: Text('5 minutes before')),
-                DropdownMenuItem(
-                    value: Duration(minutes: 15), child: Text('15 minutes before')),
-                DropdownMenuItem(
-                    value: Duration(minutes: 30), child: Text('30 minutes before')),
-                DropdownMenuItem(
-                    value: Duration(hours: 1), child: Text('1 hour before')),
-              ],
-              onChanged: (d) => setState(() => _reminder = d),
-              decoration: const InputDecoration(labelText: 'Reminder'),
-            ),
+            for (var i = 0; i < shownReminderCount; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<Duration?>(
+                        value: i < _reminders.length ? _reminders[i] : null,
+                        items: [
+                          const DropdownMenuItem<Duration?>(
+                            value: null,
+                            child: Text('No reminder'),
+                          ),
+                          ...reminderOptions
+                              .where((option) =>
+                                  !_reminders.contains(option) ||
+                                  (i < _reminders.length && _reminders[i] == option))
+                              .map((option) => DropdownMenuItem<Duration?>(
+                                    value: option,
+                                    child: Text(_formatReminder(option)),
+                                  )),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            if (value == null) {
+                              if (i < _reminders.length) {
+                                _reminders.removeAt(i);
+                              }
+                              return;
+                            }
+                            if (i < _reminders.length) {
+                              _reminders[i] = value;
+                            } else if (_reminders.length < maxReminders) {
+                              _reminders.add(value);
+                            }
+                          });
+                        },
+                        decoration: InputDecoration(
+                          labelText: i == 0 ? 'Reminder' : 'Reminder ${i + 1}',
+                        ),
+                      ),
+                    ),
+                    if (i > 0 && i < _reminders.length)
+                      IconButton(
+                        tooltip: 'Remove reminder',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() => _reminders.removeAt(i)),
+                      ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerLeft,
@@ -271,5 +346,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         ),
       ),
     );
+  }
+
+  String _formatReminder(Duration duration) {
+    if (duration.inDays >= 1) return '${duration.inDays} day before';
+    if (duration.inHours >= 1) return '${duration.inHours} hour before';
+    return '${duration.inMinutes} minutes before';
   }
 }

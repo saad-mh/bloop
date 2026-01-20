@@ -17,6 +17,7 @@ class Task extends HiveObject {
     this.allDay = false,
     this.recurrence = Recurrence.none,
     this.reminderMinutes,
+    this.reminderMinutesList,
     this.priority = Priority.medium,
     List<String>? tags,
     this.isCompleted = false,
@@ -24,6 +25,7 @@ class Task extends HiveObject {
     this.updatedAt,
     this.completedAt,
     this.notificationId,
+    this.notificationIds,
   })  : id = id ?? _uuid.v4(),
         createdAt = createdAt ?? DateTime.now().toUtc(),
         tags = tags ?? [];
@@ -49,6 +51,9 @@ class Task extends HiveObject {
   @HiveField(6)
   int? reminderMinutes; // store minutes for Hive compatibility
 
+  @HiveField(14)
+  List<int>? reminderMinutesList;
+
   @HiveField(7)
   Priority priority;
 
@@ -70,8 +75,22 @@ class Task extends HiveObject {
   @HiveField(13)
   int? notificationId;
 
+  @HiveField(15)
+  List<int>? notificationIds;
+
   Duration? get reminderBefore =>
       reminderMinutes != null ? Duration(minutes: reminderMinutes!) : null;
+
+  List<Duration> get remindersBefore {
+    final list = reminderMinutesList;
+    if (list != null && list.isNotEmpty) {
+      return list.map((m) => Duration(minutes: m)).toList();
+    }
+    if (reminderMinutes != null) {
+      return [Duration(minutes: reminderMinutes!)];
+    }
+    return <Duration>[];
+  }
 
   Task copyWith({
     String? title,
@@ -80,6 +99,7 @@ class Task extends HiveObject {
     bool? allDay,
     Recurrence? recurrence,
     Duration? reminderBefore,
+    List<Duration>? remindersBefore,
     Priority? priority,
     List<String>? tags,
     bool? isCompleted,
@@ -87,7 +107,12 @@ class Task extends HiveObject {
     DateTime? updatedAt,
     DateTime? completedAt,
     int? notificationId,
+    List<int>? notificationIds,
   }) {
+    final resolvedReminders = remindersBefore;
+    final resolvedReminderMinutesList = resolvedReminders
+        ?.map((d) => d.inMinutes)
+        .toList();
     return Task(
       id: id,
       title: title ?? this.title,
@@ -95,7 +120,11 @@ class Task extends HiveObject {
       dueDateTime: dueDateTime ?? this.dueDateTime,
       allDay: allDay ?? this.allDay,
       recurrence: recurrence ?? this.recurrence,
-      reminderMinutes: reminderBefore?.inMinutes ?? reminderMinutes,
+      reminderMinutes: reminderBefore?.inMinutes ??
+          (resolvedReminders?.isNotEmpty == true
+              ? resolvedReminders!.first.inMinutes
+              : reminderMinutes),
+      reminderMinutesList: resolvedReminderMinutesList ?? reminderMinutesList,
       priority: priority ?? this.priority,
       tags: tags ?? List<String>.from(this.tags),
       isCompleted: isCompleted ?? this.isCompleted,
@@ -103,6 +132,7 @@ class Task extends HiveObject {
       updatedAt: updatedAt ?? this.updatedAt,
       completedAt: completedAt ?? this.completedAt,
       notificationId: notificationId ?? this.notificationId,
+      notificationIds: notificationIds ?? this.notificationIds,
     );
   }
 
@@ -115,6 +145,7 @@ class Task extends HiveObject {
       'allDay': allDay,
       'recurrence': recurrence.name,
       'reminderMinutes': reminderMinutes,
+      'reminderMinutesList': reminderMinutesList,
       'priority': priority.name,
       'tags': tags,
       'isCompleted': isCompleted,
@@ -122,6 +153,7 @@ class Task extends HiveObject {
       'updatedAt': updatedAt?.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
       'notificationId': notificationId,
+      'notificationIds': notificationIds,
     };
   }
 
@@ -139,6 +171,9 @@ class Task extends HiveObject {
         orElse: () => Recurrence.none,
       ),
       reminderMinutes: json['reminderMinutes'] as int?,
+      reminderMinutesList: (json['reminderMinutesList'] as List?)
+          ?.map((e) => e as int)
+          .toList(),
       priority: Priority.values.firstWhere(
         (p) => p.name == json['priority'],
         orElse: () => Priority.medium,
@@ -155,6 +190,9 @@ class Task extends HiveObject {
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
       notificationId: json['notificationId'] as int?,
+        notificationIds: (json['notificationIds'] as List?)
+          ?.map((e) => e as int)
+          .toList(),
     );
   }
 }
@@ -179,6 +217,7 @@ class TaskAdapter extends TypeAdapter<Task> {
       allDay: fields[4] as bool? ?? false,
       recurrence: fields[5] as Recurrence? ?? Recurrence.none,
       reminderMinutes: fields[6] as int?,
+      reminderMinutesList: (fields[14] as List?)?.cast<int>(),
       priority: fields[7] as Priority? ?? Priority.medium,
       tags: (fields[8] as List?)?.cast<String>() ?? <String>[],
       isCompleted: fields[9] as bool? ?? false,
@@ -186,13 +225,14 @@ class TaskAdapter extends TypeAdapter<Task> {
       updatedAt: fields[11] as DateTime?,
       completedAt: fields[12] as DateTime?,
       notificationId: fields[13] as int?,
+      notificationIds: (fields[15] as List?)?.cast<int>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Task obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -207,6 +247,8 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..write(obj.recurrence)
       ..writeByte(6)
       ..write(obj.reminderMinutes)
+      ..writeByte(14)
+      ..write(obj.reminderMinutesList)
       ..writeByte(7)
       ..write(obj.priority)
       ..writeByte(8)
@@ -220,7 +262,9 @@ class TaskAdapter extends TypeAdapter<Task> {
       ..writeByte(12)
       ..write(obj.completedAt)
       ..writeByte(13)
-      ..write(obj.notificationId);
+      ..write(obj.notificationId)
+      ..writeByte(15)
+      ..write(obj.notificationIds);
   }
 }
 

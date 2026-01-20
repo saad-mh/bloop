@@ -67,7 +67,7 @@ class NotificationService {
     ));
   }
 
-  Future<int?> scheduleReminder(Task task) async {
+  Future<List<int>?> scheduleReminders(Task task) async {
     // On Android we must ensure the app is allowed to schedule exact alarms
     if (Platform.isAndroid) {
       try {
@@ -100,23 +100,32 @@ class NotificationService {
         // If platform channel fails, fall back to attempting to schedule.
       }
     }
-    if (task.dueDateTime == null || task.reminderBefore == null) {
+    final DateTime? due = task.dueDateTime;
+    final reminders = task.remindersBefore;
+    final hasDueTime = due != null && !task.allDay;
+    if (due == null && reminders.isNotEmpty) {
       // ignore: avoid_print
-      print('NotificationService: missing due date or reminder, returning null');
-      return null;
-    }
-    final scheduled = task.dueDateTime!.subtract(task.reminderBefore!);
-    if (scheduled.isBefore(DateTime.now())) {
-      // ignore: avoid_print
-      print('NotificationService: scheduled time is in the past ($scheduled), returning null');
-      return null;
+      print('NotificationService: missing due date, no reminders scheduled');
+      return <int>[];
     }
 
-    final id = task.notificationId ?? task.id.hashCode;
-    // Log computed times for debugging
-    // ignore: avoid_print
-    print('NotificationService: now=${DateTime.now().toIso8601String()} scheduledRaw=${scheduled.toIso8601String()} scheduledIsUtc=${scheduled.isUtc} tz.local=${tz.local.name}');
-    final tzDateTime = tz.TZDateTime.from(scheduled, tz.local);
+    final now = DateTime.now();
+    final scheduledTimes = <DateTime>{};
+    if (hasDueTime) {
+      scheduledTimes.add(due);
+    }
+    for (final reminder in reminders) {
+      if (due == null) continue;
+      scheduledTimes.add(due.subtract(reminder));
+    }
+
+    final futureTimes = scheduledTimes.where((t) => t.isAfter(now)).toList()
+      ..sort();
+    if (futureTimes.isEmpty) {
+      // ignore: avoid_print
+      print('NotificationService: no future notifications to schedule');
+      return <int>[];
+    }
 
     // Decide schedule mode: prefer alarmClock when exact alarms are available,
     // otherwise fall back to exactAllowWhileIdle for a best-effort delivery.
@@ -130,30 +139,41 @@ class NotificationService {
       scheduleMode = fln.AndroidScheduleMode.exactAllowWhileIdle;
     }
 
-    // Debug log
-    // ignore: avoid_print
-    print('NotificationService: scheduling id=$id at $tzDateTime using mode=$scheduleMode');
+    final ids = <int>[];
+    for (var i = 0; i < futureTimes.length; i++) {
+      final scheduled = futureTimes[i];
+      final id = _resolveNotificationId(task, i);
+      ids.add(id);
+      // Log computed times for debugging
+      // ignore: avoid_print
+      print('NotificationService: now=${now.toIso8601String()} scheduledRaw=${scheduled.toIso8601String()} scheduledIsUtc=${scheduled.isUtc} tz.local=${tz.local.name}');
+      final tzDateTime = tz.TZDateTime.from(scheduled, tz.local);
 
-    await _plugin.zonedSchedule(
-      id,
-      task.title,
-      task.notes ?? 'Task reminder',
-      tzDateTime,
-      const fln.NotificationDetails(
-        android: fln.AndroidNotificationDetails(
-          'bloop_tasks',
-          'Task Reminders',
-          channelDescription: 'Reminders for tasks',
-          importance: fln.Importance.defaultImportance,
-          priority: fln.Priority.defaultPriority,
+      // Debug log
+      // ignore: avoid_print
+      print('NotificationService: scheduling id=$id at $tzDateTime using mode=$scheduleMode');
+
+      await _plugin.zonedSchedule(
+        id,
+        task.title,
+        task.notes ?? 'Task reminder',
+        tzDateTime,
+        const fln.NotificationDetails(
+          android: fln.AndroidNotificationDetails(
+            'bloop_tasks',
+            'Task Reminders',
+            channelDescription: 'Reminders for tasks',
+            importance: fln.Importance.defaultImportance,
+            priority: fln.Priority.defaultPriority,
+          ),
+          iOS: fln.DarwinNotificationDetails(),
         ),
-        iOS: fln.DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: scheduleMode,
-      uiLocalNotificationDateInterpretation:
-          fln.UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: fln.DateTimeComponents.dateAndTime,
-    );
+        androidScheduleMode: scheduleMode,
+        uiLocalNotificationDateInterpretation:
+            fln.UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: fln.DateTimeComponents.dateAndTime,
+      );
+    }
 
     // Debug: list pending notification requests to confirm registration
     try {
@@ -165,7 +185,7 @@ class NotificationService {
       print('NotificationService: failed to list pending requests: $e');
     }
 
-    return id;
+    return ids;
   }
 
   /// Return list of pending notification requests (for debugging).
@@ -180,6 +200,22 @@ class NotificationService {
   Future<void> cancel(int? id) async {
     if (id == null) return;
     await _plugin.cancel(id);
+  }
+
+  Future<void> cancelMany(List<int>? ids) async {
+    if (ids == null || ids.isEmpty) return;
+    for (final id in ids) {
+      await _plugin.cancel(id);
+    }
+  }
+
+  int _resolveNotificationId(Task task, int index) {
+    final existing = task.notificationIds;
+    if (existing != null && index < existing.length) {
+      return existing[index];
+    }
+    final base = task.id.hashCode & 0x7fffffff;
+    return base + index + 1;
   }
 
   /// Debug helper: show an immediate test notification on the app channel.
