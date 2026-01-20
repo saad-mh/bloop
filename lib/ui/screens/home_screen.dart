@@ -40,7 +40,9 @@ class HomeScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final task = tasks[index];
               return TaskTile(
+                key: ValueKey(task.id),
                 task: task,
+                animateOnComplete: true,
                 onToggleComplete: (checked) async {
                   await ref.read(taskListProvider.notifier)
                       .toggleComplete(task, value: checked);

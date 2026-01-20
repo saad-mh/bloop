@@ -12,7 +12,10 @@ class CompletedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(completedTasksProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Completed')),
+      appBar: AppBar(
+        title: const Text('Completed'),
+        toolbarHeight: MediaQuery.of(context).size.height * 0.1,
+        ),
       body: tasksAsync.when(
         data: (tasks) {
           if (tasks.isEmpty) {
@@ -23,7 +26,9 @@ class CompletedScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final task = tasks[index];
               return TaskTile(
+                key: ValueKey(task.id),
                 task: task,
+                animateOnUncomplete: true,
                 onToggleComplete: (checked) async {
                   await ref
                       .read(taskListProvider.notifier)

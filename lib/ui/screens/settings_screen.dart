@@ -13,7 +13,10 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        toolbarHeight: MediaQuery.of(context).size.height * 0.1,
+      ),
       body: ListView(
         children: [
           ListTile(

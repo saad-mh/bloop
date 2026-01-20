@@ -92,11 +92,16 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final hasDueTime = _dueDateTime != null && !_allDay;
     final maxReminders = hasDueTime ? 2 : 3;
     final defaultReminder = settings.defaultReminderMinutes > 0
-        ? Duration(minutes: settings.defaultReminderMinutes)
-        : null;
+      ? Duration(minutes: settings.defaultReminderMinutes)
+      : null;
+    // Only use the default reminder when a due date is set. This allows
+    // creating tasks with no due date even if the user has a default
+    // reminder configured in settings.
     final selectedReminders = _reminders.isNotEmpty
-        ? List<Duration>.from(_reminders)
-        : (defaultReminder != null ? [defaultReminder] : <Duration>[]);
+      ? List<Duration>.from(_reminders)
+      : ((_dueDateTime != null && defaultReminder != null)
+        ? [defaultReminder]
+        : <Duration>[]);
     final uniqueReminders = <int>{};
     final reminders = <Duration>[];
     for (final r in selectedReminders) {
