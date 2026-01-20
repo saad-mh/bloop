@@ -1,13 +1,11 @@
-import 'package:bloop/services/notif_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'completed_screen.dart';
 import 'home_screen.dart';
+import 'focus_screen.dart';
 import 'settings_screen.dart';
-import 'tags_screen.dart';
 import '../../providers/settings_provider.dart';
-import 'package:flutter/foundation.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -22,6 +20,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   final _pages = const [
     HomeScreen(),
     CompletedScreen(),
+    FocusScreen(),
     SettingsScreen(),
   ];
 
@@ -35,44 +34,35 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     return Scaffold(
-      body: IndexedStack(
-        index: _index,
-        children: _pages,
+      extendBody: true,
+      body: SafeArea(
+        child: IndexedStack(
+          index: _index,
+          children: _pages,
+        ),
       ),
-      appBar: kDebugMode
-          ? AppBar(
-              title: const Text(''),
-              actions: [
-                TextButton(onPressed: () {
-                  NotifService().showNotification(
-                      id: 10,
-                      title: 'Test Notification',
-                      body: 'Test Notif v2!'
-                  );
-                }, child: const Text('Test Notification')),
-                TextButton(onPressed: () {
-                  NotifService().scheduleNotification(
-                      id: 10,
-                      title: 'Test Notification',
-                      body: 'Test Notif v2!',
-                      hour: tz.TZDateTime.now(tz.local).hour,
-                      minute: tz.TZDateTime.now(tz.local).minute,
-                  );
-                }, child: const Text('Schedule Notif'))
-              ],
-            )
-          : null,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) {
-          setState(() => _index = i);
-          ref.read(settingsProvider.notifier).setLastTabIndex(i);
-        },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.list_alt), label: 'Active'),
-          NavigationDestination(icon: Icon(Icons.checklist), label: 'Done'),
-          NavigationDestination(icon: Icon(Icons.settings), label: 'Settings'),
-        ],
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: GNav(
+          haptic: true,
+          gap: 8,
+          // rippleColor: settings.themeMode == ThemeMode.dark
+          //     ? Colors.grey.shade800
+          //     : Colors.grey.shade300,
+          iconSize: 24,
+          selectedIndex: _index,
+          onTabChange: (i) {
+            setState(() => _index = i);
+            ref.read(settingsProvider.notifier).setLastTabIndex(i);
+          },
+          tabBackgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
+          tabs: const [
+            GButton(icon: Icons.list_alt, text: 'Active'),
+            GButton(icon: Icons.checklist, text: 'Done'),
+            GButton(icon: Icons.workspaces, text: 'Focus'),
+            GButton(icon: Icons.settings, text: 'Settings'),
+          ],
+        ),
       ),
     );
   }

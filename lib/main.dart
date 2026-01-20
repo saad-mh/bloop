@@ -26,7 +26,7 @@ class BloopApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final seed = Color(settings.seedColor);
     return MaterialApp(
-      title: 'Bloop Tasks',
+      title: 'Bloop',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
         useMaterial3: true,
