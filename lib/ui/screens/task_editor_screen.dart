@@ -141,10 +141,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       for (final reminder in reminders) {
         scheduledTimes.add(task.dueDateTime!.subtract(reminder));
       }
-      if (scheduledTimes.any((t) => t.isBefore(now))) {
+      final hasFutureTime = scheduledTimes.any((t) => t.isAfter(now));
+      if (!hasFutureTime) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('One or more notifications are in the past. Please choose a future time.')),
+          const SnackBar(content: Text('All notifications are in the past. Please choose a future time.')),
         );
         return;
       }
