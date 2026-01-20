@@ -110,122 +110,135 @@ class _TaskTileState extends State<TaskTile> {
                 ),
                 child: Row(
                   children: [
-                    GestureDetector(
-                      onTap: _handleToggleComplete,
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: widget.task.isCompleted
-                              ? Theme.of(context).colorScheme.secondary
-                              : Colors.transparent,
-                          border: Border.all(
-                            color: widget.task.isCompleted
-                                ? Colors.transparent
-                                : Theme.of(context)
-                                    .dividerColor
-                                    .withAlpha(alphaFromOpacity(0.6)),
-                            width: 2,
-                          ),
-                        ),
-                        child: widget.task.isCompleted
-                            ? const Icon(Icons.check, size: 16, color: Colors.white)
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.task.title,
-                            overflow: TextOverflow.ellipsis,
-                            style: widget.task.isCompleted
-                                ? const TextStyle(
-                                    decoration: TextDecoration.lineThrough,
-                                    color: Colors.grey,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                  )
-                                : TextStyle(
-                                    color: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge
-                                        ?.color,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w600,
+                      child: GestureDetector(
+                        onTap: _handleToggleComplete,
+                        behavior: HitTestBehavior.opaque,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: widget.task.isCompleted
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Colors.transparent,
+                                border: Border.all(
+                                  color: widget.task.isCompleted
+                                      ? Colors.transparent
+                                      : Theme.of(context)
+                                          .dividerColor
+                                          .withAlpha(alphaFromOpacity(0.6)),
+                                  width: 2,
+                                ),
+                              ),
+                              child: widget.task.isCompleted
+                                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                  : null,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.task.title,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: widget.task.isCompleted
+                                        ? const TextStyle(
+                                            decoration: TextDecoration.lineThrough,
+                                            color: Colors.grey,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                          )
+                                        : TextStyle(
+                                            color: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
+                                                ?.color,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                   ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              if (widget.task.tags.isNotEmpty)
-                                TagChip(label: widget.task.tags.first),
-                              if (widget.task.tags.isNotEmpty) const SizedBox(width: 10),
-                              if (dueDateTime != null)
-                                Row(
-                                  children: [
-                                    if (dateText != null)
-                                      Text(
-                                        dateText,
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      if (widget.task.tags.isNotEmpty)
+                                        TagChip(label: widget.task.tags.first),
+                                      if (widget.task.tags.isNotEmpty)
+                                        const SizedBox(width: 10),
+                                      if (dueDateTime != null)
+                                        Row(
+                                          children: [
+                                            if (dateText != null)
+                                              Text(
+                                                dateText,
+                                                style: TextStyle(
+                                                  color: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyMedium
+                                                      ?.color
+                                                      ?.withAlpha(
+                                                          alphaFromOpacity(0.8)),
+                                                ),
+                                              ),
+                                            if (dateText != null) const SizedBox(width: 8),
+                                            if (timeText != null) ...[
+                                              Icon(
+                                                Icons.schedule_rounded,
+                                                size: 16,
+                                                color: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.color
+                                                    ?.withAlpha(
+                                                        alphaFromOpacity(0.7)),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                timeText!,
+                                                style: TextStyle(
+                                                  color: isOverdue
+                                                      ? overdueColor
+                                                      : Theme.of(context)
+                                                          .textTheme
+                                                          .bodyMedium
+                                                          ?.color
+                                                          ?.withAlpha(
+                                                              alphaFromOpacity(0.8)),
+                                                  fontWeight:
+                                                      isOverdue ? FontWeight.w600 : null,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                  if (widget.task.notes != null &&
+                                      widget.task.notes!.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 6),
+                                      child: Text(
+                                        widget.task.notes!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .textTheme
                                               .bodyMedium
                                               ?.color
                                               ?.withAlpha(alphaFromOpacity(0.8)),
+                                          fontSize: 13,
                                         ),
                                       ),
-                                    if (dateText != null) const SizedBox(width: 8),
-                                    if (timeText != null) ...[
-                                      Icon(
-                                        Icons.schedule_rounded,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.color
-                                            ?.withAlpha(alphaFromOpacity(0.7)),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        timeText!,
-                                        style: TextStyle(
-                                          color: isOverdue
-                                              ? overdueColor
-                                              : Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.color
-                                                  ?.withAlpha(alphaFromOpacity(0.8)),
-                                          fontWeight: isOverdue ? FontWeight.w600 : null,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                            ],
-                          ),
-                          if (widget.task.notes != null && widget.task.notes!.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 6),
-                              child: Text(
-                                widget.task.notes!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Theme.of(context)
-                                      .textTheme
-                                      .bodyMedium
-                                      ?.color
-                                      ?.withAlpha(alphaFromOpacity(0.8)),
-                                  fontSize: 13,
-                                ),
+                                    ),
+                                ],
                               ),
                             ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                     if (isOverdue)
