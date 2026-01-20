@@ -33,12 +33,13 @@ Because of the short build time, the app is **not fully furnished** and intentio
 
 ---
 
-## Known Limitations
+## Plans for the project:
 
-The following features are present in the UI but **do not work yet** and will be implemented later:
+The following are the features planned:
 
 - [x] Notifications / reminders
 - [ ] Tags page and tag-based filtering
+- [ ] Focus elements
 
 
 Everything else in the app works as intended.
@@ -82,7 +83,7 @@ Signed APK builds will be provided here.
 
 | Version | Platform | Release Link | SHA |
 |-------|---------|---------------|--------|
-| v1.0.0 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/tag/Release)_ | _[SHA](https://github.com/saad-mh/bloop/releases/download/Release/bloop1.0.1.apk.sha1)_ |
+| v1.0.1 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/tag/Release)_ | _[SHA](https://github.com/saad-mh/bloop/releases/download/Release/bloop1.0.1.apk.sha1)_ |
 
 ---
 
