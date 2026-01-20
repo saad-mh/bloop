@@ -35,6 +35,8 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 	Duration _longBreakDuration = const Duration(minutes: 15);
 	int _totalSessions = 4;
 	bool _autoStartNext = true;
+	Duration _totalFocusSpent = Duration.zero;
+	Duration _sessionStartRemaining = Duration.zero;
 
 	Duration _remaining = const Duration(minutes: 25);
 	bool _isRunning = false;
@@ -49,7 +51,10 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 
 	void _start() {
 		_timer?.cancel();
-		setState(() => _isRunning = true);
+		setState(() {
+			_isRunning = true;
+			_sessionStartRemaining = _remaining;
+		});
 		_timer = Timer.periodic(const Duration(seconds: 1), (_) {
 			if (_remaining.inSeconds <= 1) {
 				_timer?.cancel();
@@ -57,6 +62,7 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 					_remaining = Duration.zero;
 					_isRunning = false;
 				});
+				_accumulateFocusTime();
 				_handleSessionComplete();
 				return;
 			}
@@ -69,6 +75,7 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 	void _pause() {
 		_timer?.cancel();
 		setState(() => _isRunning = false);
+		_accumulateFocusTime();
 	}
 
 	void _reset() {
@@ -81,6 +88,8 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 	}
 
 	void _nextSession() {
+		_timer?.cancel();
+		_accumulateFocusTime();
 		setState(() {
 			_advanceSession();
 			_isRunning = false;
@@ -222,6 +231,8 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 									),
 								],
 							),
+							const SizedBox(height: 16),
+							_buildTotalTimeCard(context),
 						],
 					),
 				),
@@ -251,6 +262,105 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 		}
 	}
 
+	void _accumulateFocusTime() {
+		if (_sessionType != _SessionType.focus) {
+			return;
+		}
+		final elapsed = _sessionStartRemaining - _remaining;
+		if (elapsed.isNegative || elapsed == Duration.zero) {
+			return;
+		}
+		setState(() {
+			_totalFocusSpent += elapsed;
+			_sessionStartRemaining = _remaining;
+		});
+	}
+
+class FocusedTodayCard extends StatelessWidget {
+	final Duration focusedDuration;
+	const FocusedTodayCard({Key? key, required this.focusedDuration}) : super(key: key);
+
+	@override
+	Widget build(BuildContext context) {
+		final scheme = Theme.of(context).colorScheme;
+		final textTheme = Theme.of(context).textTheme;
+		final totalMinutes = focusedDuration.inMinutes;
+		final displayText = totalMinutes < 60
+				? '${totalMinutes}m'
+				: (focusedDuration.inMinutes / 60).toStringAsFixed(1) + 'h';
+		final progress = (totalMinutes / 240).clamp(0, 1);
+
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+			decoration: BoxDecoration(
+				color: scheme.surface,
+				borderRadius: BorderRadius.circular(18),
+				boxShadow: [
+					BoxShadow(
+						color: scheme.shadow.withOpacity(0.06),
+						blurRadius: 16,
+						offset: const Offset(0, 6),
+					),
+				],
+			),
+			child: Row(
+				children: [
+					Container(
+						padding: const EdgeInsets.all(10),
+						decoration: BoxDecoration(
+							color: scheme.primaryContainer,
+							borderRadius: BorderRadius.circular(14),
+						),
+						child: Icon(
+							Icons.hourglass_bottom_rounded,
+							color: scheme.onPrimaryContainer,
+						),
+					),
+					const SizedBox(width: 12),
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								Text(
+									'Focused Today',
+									style: textTheme.titleMedium?.copyWith(
+										fontWeight: FontWeight.w600,
+									),
+								),
+								const SizedBox(height: 8),
+								Row(
+									mainAxisAlignment: MainAxisAlignment.spaceBetween,
+									children: [
+										Expanded(
+											child: ClipRRect(
+												borderRadius: BorderRadius.circular(999),
+												child: LinearProgressIndicator(
+													value: progress.toDouble(),
+													minHeight: 6,
+													backgroundColor: scheme.surfaceVariant,
+													color: scheme.primary,
+												),
+											),
+										),
+										const SizedBox(width: 12),
+										Text(
+											displayText,
+											style: textTheme.titleLarge?.copyWith(
+												fontWeight: FontWeight.w700,
+												color: scheme.onSurface,
+											),
+										),
+									],
+								),
+							],
+						),
+					),
+				],
+			),
+		);
+	}
+}
+
 	Future<void> _openSettings() async {
 		final focusController = TextEditingController(text: _focusDuration.inMinutes.toString());
 		final shortController = TextEditingController(text: _shortBreakDuration.inMinutes.toString());
@@ -266,90 +376,90 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 			isScrollControlled: true,
 			showDragHandle: true,
 			builder: (context) {
-				return Padding(
-					padding: EdgeInsets.only(
-						left: 20,
-						right: 20,
-						top: 8,
-						bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-					),
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						crossAxisAlignment: CrossAxisAlignment.start,
-						children: [
-							Text(
-								'Pomodoro settings',
-								style: Theme.of(context).textTheme.titleLarge,
+				return StatefulBuilder(
+					builder: (context, setModalState) {
+						return Padding(
+							padding: EdgeInsets.only(
+								left: 20,
+								right: 20,
+								top: 8,
+								bottom: MediaQuery.of(context).viewInsets.bottom + 20,
 							),
-							const SizedBox(height: 16),
-							_buildDurationControl(
-								context,
-								label: 'Custom focus duration (minutes)',
-								min: 5,
-								max: 60,
-								value: focusMinutes,
-								controller: focusController,
-								onChanged: (v) => focusMinutes = v,
-							),
-							const SizedBox(height: 12),
-							_buildDurationControl(
-								context,
-								label: 'Custom short break duration (minutes)',
-								min: 1,
-								max: 20,
-								value: shortMinutes,
-								controller: shortController,
-								onChanged: (v) => shortMinutes = v,
-							),
-							const SizedBox(height: 12),
-							_buildDurationControl(
-								context,
-								label: 'Custom long break duration (minutes)',
-								min: 5,
-								max: 30,
-								value: longMinutes,
-								controller: longController,
-								onChanged: (v) => longMinutes = v,
-							),
-							const SizedBox(height: 12),
-							TextField(
-								controller: sessionsController,
-								keyboardType: TextInputType.number,
-								decoration: const InputDecoration(
-									labelText: 'Sessions per cycle',
-								),
-							),
-							const SizedBox(height: 12),
-							StatefulBuilder(
-								builder: (context, setModalState) {
-									return SwitchListTile(
+							child: Column(
+								mainAxisSize: MainAxisSize.min,
+								crossAxisAlignment: CrossAxisAlignment.start,
+								children: [
+									Text(
+										'Pomodoro settings',
+										style: Theme.of(context).textTheme.titleLarge,
+									),
+									const SizedBox(height: 16),
+									_buildDurationControl(
+										context,
+										label: 'Custom focus duration (minutes)',
+										min: 5,
+										max: 60,
+										value: focusMinutes,
+										controller: focusController,
+										onChanged: (v) => setModalState(() => focusMinutes = v),
+									),
+									const SizedBox(height: 12),
+									_buildDurationControl(
+										context,
+										label: 'Custom short break duration (minutes)',
+										min: 1,
+										max: 20,
+										value: shortMinutes,
+										controller: shortController,
+										onChanged: (v) => setModalState(() => shortMinutes = v),
+									),
+									const SizedBox(height: 12),
+									_buildDurationControl(
+										context,
+										label: 'Custom long break duration (minutes)',
+										min: 5,
+										max: 30,
+										value: longMinutes,
+										controller: longController,
+										onChanged: (v) => setModalState(() => longMinutes = v),
+									),
+									const SizedBox(height: 12),
+									TextField(
+										controller: sessionsController,
+										keyboardType: TextInputType.number,
+										decoration: const InputDecoration(
+											labelText: 'Sessions per cycle',
+										),
+									),
+									const SizedBox(height: 12),
+									SwitchListTile(
 										contentPadding: EdgeInsets.zero,
 										value: autoStart,
 										onChanged: (v) => setModalState(() => autoStart = v),
 										title: const Text('Auto-start next session'),
-									);
-								},
-							),
-							const SizedBox(height: 16),
-							Row(
-								children: [
-									Expanded(
-										child: OutlinedButton(
-											onPressed: () => Navigator.pop(context, false),
-											child: const Text('Cancel'),
-										),
 									),
-									const SizedBox(width: 12),
-									Expanded(
-										child: FilledButton(
-											onPressed: () => Navigator.pop(context, true),
-											child: const Text('Save'),
-										),
+									const SizedBox(height: 16),
+									Row(
+										children: [
+											Expanded(
+												child: OutlinedButton(
+													onPressed: () => Navigator.pop(context, false),
+													child: const Text('Cancel'),
+												),
+											),
+											const SizedBox(width: 12),
+											Expanded(
+												child: FilledButton(
+													onPressed: () => Navigator.pop(context, true),
+													child: const Text('Save'),
+												),
+											),
+										],
 									),
 								],
 							),
-						],
-					),
+						);
+					},
 				);
 			},
 		);
@@ -358,15 +468,15 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 			return;
 		}
 
-		final focusMinutes = int.tryParse(focusController.text.trim()) ?? focusMinutes;
-		final shortMinutes = int.tryParse(shortController.text.trim()) ?? shortMinutes;
-		final longMinutes = int.tryParse(longController.text.trim()) ?? longMinutes;
+		final parsedFocus = int.tryParse(focusController.text.trim()) ?? focusMinutes;
+		final parsedShort = int.tryParse(shortController.text.trim()) ?? shortMinutes;
+		final parsedLong = int.tryParse(longController.text.trim()) ?? longMinutes;
 		final sessions = int.tryParse(sessionsController.text.trim()) ?? _totalSessions;
 
 		setState(() {
-			_focusDuration = Duration(minutes: focusMinutes.clamp(1, 180));
-			_shortBreakDuration = Duration(minutes: shortMinutes.clamp(1, 60));
-			_longBreakDuration = Duration(minutes: longMinutes.clamp(1, 120));
+			_focusDuration = Duration(minutes: parsedFocus.clamp(1, 180));
+			_shortBreakDuration = Duration(minutes: parsedShort.clamp(1, 60));
+			_longBreakDuration = Duration(minutes: parsedLong.clamp(1, 120));
 			_totalSessions = sessions.clamp(1, 12);
 			_autoStartNext = autoStart;
 			_sessionType = _SessionType.focus;
@@ -385,45 +495,41 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 		required TextEditingController controller,
 		required ValueChanged<int> onChanged,
 	}) {
-		return StatefulBuilder(
-			builder: (context, setModalState) {
-				final clamped = value.clamp(min, max).toDouble();
-				return Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
+		final clamped = value.clamp(min, max).toDouble();
+		return Column(
+			crossAxisAlignment: CrossAxisAlignment.start,
+			children: [
+				Text(label, style: Theme.of(context).textTheme.bodyMedium),
+				Row(
 					children: [
-						Text(label, style: Theme.of(context).textTheme.bodyMedium),
-						Row(
-							children: [
-								Expanded(
-									child: Slider(
-										min: min.toDouble(),
-										max: max.toDouble(),
-										value: clamped,
-										onChanged: (v) {
-											final newValue = v.round();
-											controller.text = newValue.toString();
-											setModalState(() => onChanged(newValue));
-										},
-									),
-								),
-								SizedBox(
-									width: 72,
-									child: TextField(
-										controller: controller,
-										keyboardType: TextInputType.number,
-										onChanged: (text) {
-											final parsed = int.tryParse(text.trim());
-											if (parsed != null) {
-												setModalState(() => onChanged(parsed));
-											}
-										},
-									),
-								),
-							],
+						Expanded(
+							child: Slider(
+								min: min.toDouble(),
+								max: max.toDouble(),
+								value: clamped,
+								onChanged: (v) {
+									final newValue = v.round();
+									controller.text = newValue.toString();
+									onChanged(newValue);
+								},
+							),
+						),
+						SizedBox(
+							width: 72,
+							child: TextField(
+								controller: controller,
+								keyboardType: TextInputType.number,
+								onChanged: (text) {
+									final parsed = int.tryParse(text.trim());
+									if (parsed != null) {
+										onChanged(parsed);
+									}
+								},
+							),
 						),
 					],
-				);
-			},
+				),
+			],
 		);
 	}
 
