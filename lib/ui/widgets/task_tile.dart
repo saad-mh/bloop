@@ -94,6 +94,7 @@ class _TaskTileState extends State<TaskTile> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: InkWell(
             onTap: widget.onTap,
+            onLongPress: widget.onTap,
             borderRadius: BorderRadius.circular(16),
             child: IgnorePointer(
               ignoring: _isCompleting,
@@ -113,6 +114,7 @@ class _TaskTileState extends State<TaskTile> {
                     Expanded(
                       child: GestureDetector(
                         onTap: _handleToggleComplete,
+                        onLongPress: widget.onTap,
                         behavior: HitTestBehavior.opaque,
                         child: Row(
                           children: [

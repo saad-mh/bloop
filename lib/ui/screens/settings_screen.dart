@@ -174,6 +174,14 @@ class SettingsScreen extends ConsumerWidget {
                 ref.read(settingsProvider.notifier).setNotificationsEnabled(v),
             title: const Text('Notifications'),
           ),
+          SwitchListTile(
+            value: settings.focusSessionNotificationsEnabled,
+            onChanged: (v) => ref
+                .read(settingsProvider.notifier)
+                .setFocusSessionNotificationsEnabled(v),
+            title: const Text('Focus session notification'),
+            subtitle: const Text('Show a persistent timer while focusing'),
+          ),
           ListTile(
             title: const Text('Default reminder'),
             subtitle: Text('${settings.defaultReminderMinutes} minutes before'),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/task.dart';
+import '../services/focus_foreground_task.dart';
 import '../services/storage_service.dart';
 
 class SettingsState {
@@ -10,6 +12,7 @@ class SettingsState {
     this.defaultReminderMinutes = 30,
     this.defaultPriority = Priority.medium,
     this.notificationsEnabled = true,
+    this.focusSessionNotificationsEnabled = false,
     this.themeMode = ThemeMode.system,
     this.seedColor = 0xFF607D8B, // blueGrey
     this.lastTabIndex = 0,
@@ -18,6 +21,7 @@ class SettingsState {
   final int defaultReminderMinutes;
   final Priority defaultPriority;
   final bool notificationsEnabled;
+  final bool focusSessionNotificationsEnabled;
   final ThemeMode themeMode;
   final int seedColor;
   final int lastTabIndex;
@@ -26,6 +30,7 @@ class SettingsState {
     int? defaultReminderMinutes,
     Priority? defaultPriority,
     bool? notificationsEnabled,
+    bool? focusSessionNotificationsEnabled,
     ThemeMode? themeMode,
     int? seedColor,
     int? lastTabIndex,
@@ -35,6 +40,8 @@ class SettingsState {
           defaultReminderMinutes ?? this.defaultReminderMinutes,
       defaultPriority: defaultPriority ?? this.defaultPriority,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      focusSessionNotificationsEnabled:
+          focusSessionNotificationsEnabled ?? this.focusSessionNotificationsEnabled,
       themeMode: themeMode ?? this.themeMode,
       seedColor: seedColor ?? this.seedColor,
       lastTabIndex: lastTabIndex ?? this.lastTabIndex,
@@ -49,6 +56,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final defaultReminder = box.get('defaultReminderMinutes') as int?;
       final defaultPriorityIndex = box.get('defaultPriority') as int?;
       final notificationsEnabled = box.get('notificationsEnabled') as bool?;
+        final focusSessionNotificationsEnabled =
+          box.get('focusSessionNotificationsEnabled') as bool?;
       final themeModeIndex = box.get('themeMode') as int?;
       final seed = box.get('seedColor') as int?;
 
@@ -58,12 +67,20 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             ? Priority.values[defaultPriorityIndex]
             : state.defaultPriority,
         notificationsEnabled: notificationsEnabled ?? state.notificationsEnabled,
+        focusSessionNotificationsEnabled:
+          focusSessionNotificationsEnabled ?? state.focusSessionNotificationsEnabled,
         themeMode: themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex < ThemeMode.values.length
             ? ThemeMode.values[themeModeIndex]
             : state.themeMode,
         seedColor: seed ?? state.seedColor,
         lastTabIndex: box.get('lastTabIndex') as int? ?? state.lastTabIndex,
       );
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setBool(
+          FocusSessionPrefs.focusNotificationsEnabledKey,
+          state.focusSessionNotificationsEnabled,
+        );
+      });
     } catch (_) {
       // ignore errors; defaults will be used
     }
@@ -91,6 +108,17 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final box = Hive.box(StorageService.settingsBoxName);
       box.put('notificationsEnabled', value);
     } catch (_) {}
+  }
+
+  void setFocusSessionNotificationsEnabled(bool value) {
+    state = state.copyWith(focusSessionNotificationsEnabled: value);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('focusSessionNotificationsEnabled', value);
+    } catch (_) {}
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool(FocusSessionPrefs.focusNotificationsEnabledKey, value);
+    });
   }
 
   void setThemeMode(ThemeMode mode) {

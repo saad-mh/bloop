@@ -1,5 +1,6 @@
 import 'package:bloop/services/notif_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -12,6 +13,30 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final notifService = NotifService();
   await notifService.initNotification();
+  FlutterForegroundTask.init(
+    androidNotificationOptions: AndroidNotificationOptions(
+      channelId: NotifService.focusSessionChannelId,
+      channelName: NotifService.focusSessionChannelName,
+      channelDescription: NotifService.focusSessionChannelDescription,
+      channelImportance: NotificationChannelImportance.LOW,
+      priority: NotificationPriority.LOW,
+      iconData: const NotificationIconData(
+        resType: ResourceType.mipmap,
+        resPrefix: ResourcePrefix.ic,
+        name: 'launcher',
+      ),
+    ),
+    iosNotificationOptions: const IOSNotificationOptions(
+      showNotification: false,
+      playSound: false,
+    ),
+    foregroundTaskOptions: const ForegroundTaskOptions(
+      interval: 60000,
+      autoRunOnBoot: false,
+      allowWakeLock: true,
+      allowWifiLock: false,
+    ),
+  );
   tz.initializeTimeZones();
   await StorageService.instance.init();
   await NotificationService.instance.init();

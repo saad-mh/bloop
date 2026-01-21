@@ -1,7 +1,16 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import '../../services/notif_service.dart';
+import '../../services/storage_service.dart';
+import '../../services/focus_foreground_task.dart';
+import '../../providers/settings_provider.dart';
 
 class FocusScreen extends StatelessWidget {
 	const FocusScreen({Key? key}) : super(key: key);
@@ -21,106 +30,197 @@ class FocusScreen extends StatelessWidget {
 	}
 }
 
-class _PomodoroCard extends StatefulWidget {
+class _PomodoroCard extends ConsumerStatefulWidget {
 	const _PomodoroCard();
 
 	@override
-	State<_PomodoroCard> createState() => _PomodoroCardState();
+	ConsumerState<_PomodoroCard> createState() => _PomodoroCardState();
 }
 
-class _PomodoroCardState extends State<_PomodoroCard> {
+class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindingObserver {
 	Timer? _timer;
+	Timer? _notificationTimer;
+	StreamSubscription<FocusSessionAction>? _focusActionSub;
+	final NotifService _notifService = NotifService();
+
+	static const int _notificationId = 90001;
+	static const String _totalSessionsKey = FocusSessionPrefs.totalSessionsKey;
+
 	Duration _focusDuration = const Duration(minutes: 25);
 	Duration _shortBreakDuration = const Duration(minutes: 5);
 	Duration _longBreakDuration = const Duration(minutes: 15);
 	int _totalSessions = 4;
 	bool _autoStartNext = true;
 	Duration _totalFocusSpent = Duration.zero;
-	Duration _sessionStartRemaining = Duration.zero;
+	DateTime? _sessionStartUtc;
+	int _plannedDurationSeconds = const Duration(minutes: 25).inSeconds;
 
 	Duration _remaining = const Duration(minutes: 25);
 	bool _isRunning = false;
+	bool _isSessionActive = false;
 	int _sessionIndex = 1;
 	_SessionType _sessionType = _SessionType.focus;
+	bool _isInitializing = true;
+	bool _focusSessionNotificationsEnabled = false;
+	bool _registeredSettingsListener = false;
+
+	@override
+	void initState() {
+		super.initState();
+		WidgetsBinding.instance.addObserver(this);
+		_notifService.initNotification();
+		_focusSessionNotificationsEnabled =
+				ref.read(settingsProvider).focusSessionNotificationsEnabled;
+		_focusActionSub = _notifService.focusSessionActions.listen((action) {
+			if (!mounted) return;
+			switch (action) {
+				case FocusSessionAction.toggle:
+					if (_isRunning) {
+						_pause();
+					} else {
+						_start();
+					}
+					return;
+				case FocusSessionAction.skip:
+					_nextSession();
+					return;
+			}
+		});
+		_loadPersistedState();
+	}
 
 	@override
 	void dispose() {
+		WidgetsBinding.instance.removeObserver(this);
 		_timer?.cancel();
+		_notificationTimer?.cancel();
+		_focusActionSub?.cancel();
 		super.dispose();
 	}
 
+	@override
+	void didChangeAppLifecycleState(AppLifecycleState state) {
+		switch (state) {
+			case AppLifecycleState.inactive:
+			case AppLifecycleState.paused:
+			case AppLifecycleState.hidden:
+				_stopUiTimer();
+				_notificationTimer?.cancel();
+				_notificationTimer = null;
+				_updateRemaining(DateTime.now().toUtc());
+				_persistState();
+				if (_focusSessionNotificationsEnabled && _isSessionActive) {
+					_syncFocusSessionNotification();
+				}
+				return;
+			case AppLifecycleState.resumed:
+				_restoreAndRecompute();
+				return;
+			case AppLifecycleState.detached:
+				return;
+		}
+	}
+
 	void _start() {
+		final nowUtc = DateTime.now().toUtc();
 		_timer?.cancel();
 		setState(() {
 			_isRunning = true;
-			_sessionStartRemaining = _remaining;
+			_isSessionActive = true;
+			_sessionStartUtc = nowUtc;
+			_remaining = Duration(seconds: _plannedDurationSeconds);
 		});
-		_timer = Timer.periodic(const Duration(seconds: 1), (_) {
-			if (_remaining.inSeconds <= 1) {
-				_timer?.cancel();
-				setState(() {
-					_remaining = Duration.zero;
-					_isRunning = false;
-				});
-				_accumulateFocusTime();
-				_handleSessionComplete();
-				return;
-			}
-			setState(() {
-				_remaining -= const Duration(seconds: 1);
-			});
-		});
+		_scheduleNotification(nowUtc);
+		_persistState();
+		_startUiTimer();
+		_startFocusNotificationUpdates();
 	}
 
 	void _pause() {
-		_timer?.cancel();
-		setState(() => _isRunning = false);
-		_accumulateFocusTime();
+		if (!_isRunning) return;
+		final nowUtc = DateTime.now().toUtc();
+		_stopUiTimer();
+		_stopFocusNotificationUpdates();
+		_updateRemaining(nowUtc);
+		_accumulateFocusTime(nowUtc: nowUtc);
+		setState(() {
+			_isRunning = false;
+			_isSessionActive = true;
+			_sessionStartUtc = nowUtc;
+			_plannedDurationSeconds = _remaining.inSeconds;
+		});
+		_cancelNotification();
+		_persistState();
+		_syncFocusSessionNotification();
 	}
 
 	void _reset() {
-		_timer?.cancel();
+		_stopUiTimer();
+		_stopFocusNotificationUpdates();
+		_cancelNotification();
 		setState(() {
 			_sessionType = _SessionType.focus;
-			_remaining = _focusDuration;
+			_sessionIndex = 1;
 			_isRunning = false;
+			_isSessionActive = false;
+			_sessionStartUtc = DateTime.now().toUtc();
+			_plannedDurationSeconds = _focusDuration.inSeconds;
+			_remaining = _focusDuration;
 		});
+		_persistState();
+		_cancelFocusSessionNotification();
 	}
 
 	void _nextSession() {
-		_timer?.cancel();
-		_accumulateFocusTime();
+		_stopUiTimer();
+		_stopFocusNotificationUpdates();
+		_cancelNotification();
+		_accumulateFocusTime(nowUtc: DateTime.now().toUtc());
 		setState(() {
 			_advanceSession();
 			_isRunning = false;
+			_isSessionActive = false;
+			_sessionStartUtc = DateTime.now().toUtc();
+			_plannedDurationSeconds = _currentSessionDuration().inSeconds;
+			_remaining = _currentSessionDuration();
 		});
+		_persistState();
+		_cancelFocusSessionNotification();
 	}
 
-	void _handleSessionComplete() {
-		if (!_autoStartNext) {
-			setState(() => _advanceSession());
-			return;
+	void _handleSessionComplete(DateTime nowUtc) {
+		_stopUiTimer();
+		_stopFocusNotificationUpdates();
+		_cancelNotification();
+		_cancelFocusSessionNotification();
+		_finalizeFocusTime(nowUtc: nowUtc);
+		setState(() {
+			_isRunning = false;
+			_advanceSession();
+			_sessionStartUtc = nowUtc;
+			_plannedDurationSeconds = _currentSessionDuration().inSeconds;
+			_remaining = _currentSessionDuration();
+			_isSessionActive = _autoStartNext;
+		});
+		_persistState();
+		if (_autoStartNext) {
+			_start();
 		}
-		setState(() => _advanceSession());
-		_start();
 	}
 
 	void _advanceSession() {
 		if (_sessionType == _SessionType.focus) {
 			final isLastFocus = _sessionIndex >= _totalSessions;
 			_sessionType = isLastFocus ? _SessionType.longBreak : _SessionType.shortBreak;
-			_remaining = isLastFocus ? _longBreakDuration : _shortBreakDuration;
 			return;
 		}
 		if (_sessionType == _SessionType.shortBreak) {
 			_sessionIndex = (_sessionIndex % _totalSessions) + 1;
 			_sessionType = _SessionType.focus;
-			_remaining = _focusDuration;
 			return;
 		}
 		_sessionIndex = 1;
 		_sessionType = _SessionType.focus;
-		_remaining = _focusDuration;
 	}
 
 	String _sessionLabel() {
@@ -136,8 +236,34 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 
 	@override
 	Widget build(BuildContext context) {
+		// Register settings listener once. Some Riverpod versions restrict
+		// `ref.listen` to be used from the build method of consumer widgets;
+		// registering here ensures we comply while only registering once.
+		if (!_registeredSettingsListener) {
+			_registeredSettingsListener = true;
+			ref.listen<SettingsState>(settingsProvider, (previous, next) {
+				if (previous?.focusSessionNotificationsEnabled ==
+					next.focusSessionNotificationsEnabled) return;
+				setState(() {
+					_focusSessionNotificationsEnabled = next.focusSessionNotificationsEnabled;
+				});
+				if (_focusSessionNotificationsEnabled) {
+					_syncFocusSessionNotification();
+				} else {
+					_stopFocusNotificationUpdates();
+					_cancelFocusSessionNotification();
+				}
+			});
+		}
+
 		final scheme = Theme.of(context).colorScheme;
 		final textTheme = Theme.of(context).textTheme;
+		if (_isInitializing) {
+			return const Padding(
+				padding: EdgeInsets.all(24),
+				child: Center(child: CircularProgressIndicator()),
+			);
+		}
 		final maxSeconds = _currentSessionDuration().inSeconds;
 		final progress = maxSeconds == 0
 				? 0.0
@@ -262,17 +388,35 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 		}
 	}
 
-	void _accumulateFocusTime() {
+	void _accumulateFocusTime({DateTime? nowUtc}) {
 		if (_sessionType != _SessionType.focus) {
 			return;
 		}
-		final elapsed = _sessionStartRemaining - _remaining;
+		if (_sessionStartUtc == null) {
+			return;
+		}
+		final now = nowUtc ?? DateTime.now().toUtc();
+		final elapsed = now.difference(_sessionStartUtc!);
 		if (elapsed.isNegative || elapsed == Duration.zero) {
 			return;
 		}
 		setState(() {
 			_totalFocusSpent += elapsed;
-			_sessionStartRemaining = _remaining;
+			_sessionStartUtc = now;
+		});
+	}
+
+	void _finalizeFocusTime({required DateTime nowUtc}) {
+		if (_sessionType != _SessionType.focus) {
+			return;
+		}
+		if (_sessionStartUtc == null) return;
+		final elapsed = nowUtc.difference(_sessionStartUtc!);
+		if (elapsed.isNegative || elapsed == Duration.zero) return;
+		final maxElapsed = Duration(seconds: _plannedDurationSeconds);
+		setState(() {
+			_totalFocusSpent += elapsed > maxElapsed ? maxElapsed : elapsed;
+			_sessionStartUtc = nowUtc;
 		});
 	}
 
@@ -397,9 +541,215 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 			_autoStartNext = autoStart;
 			_sessionType = _SessionType.focus;
 			_sessionIndex = 1;
-			_remaining = _focusDuration;
 			_isRunning = false;
+			_isSessionActive = false;
+			_sessionStartUtc = DateTime.now().toUtc();
+			_plannedDurationSeconds = _focusDuration.inSeconds;
+			_remaining = _focusDuration;
 		});
+		_stopUiTimer();
+		_stopFocusNotificationUpdates();
+		_cancelNotification();
+		_persistState();
+		_cancelFocusSessionNotification();
+	}
+
+	Duration _computeRemaining({DateTime? nowUtc}) {
+		if (!_isRunning || _sessionStartUtc == null) {
+			return Duration(seconds: _plannedDurationSeconds);
+		}
+		final now = nowUtc ?? DateTime.now().toUtc();
+		final elapsedSeconds = now.difference(_sessionStartUtc!).inSeconds;
+		final remainingSeconds = _plannedDurationSeconds - elapsedSeconds;
+		return Duration(seconds: remainingSeconds < 0 ? 0 : remainingSeconds);
+	}
+
+	void _updateRemaining(DateTime nowUtc) {
+		final remaining = _computeRemaining(nowUtc: nowUtc);
+		if (remaining.inSeconds <= 0) {
+			_handleSessionComplete(nowUtc);
+			return;
+		}
+		setState(() {
+			_remaining = remaining;
+		});
+	}
+
+	void _startUiTimer() {
+		_timer?.cancel();
+		_timer = Timer.periodic(const Duration(seconds: 1), (_) {
+			if (!_isRunning) {
+				_stopUiTimer();
+				return;
+			}
+			_updateRemaining(DateTime.now().toUtc());
+		});
+	}
+
+	void _startFocusNotificationUpdates() {
+		if (!_focusSessionNotificationsEnabled) return;
+		_notificationTimer?.cancel();
+		_syncFocusSessionNotification();
+		if (_isRunning) {
+			_notificationTimer = Timer.periodic(
+				const Duration(seconds: 60),
+				(_) => _syncFocusSessionNotification(),
+			);
+			_startForegroundService();
+		} else {
+			_stopForegroundService();
+		}
+	}
+
+	void _stopUiTimer() {
+		_timer?.cancel();
+		_timer = null;
+	}
+
+	void _stopFocusNotificationUpdates() {
+		_notificationTimer?.cancel();
+		_notificationTimer = null;
+		_stopForegroundService();
+	}
+
+	Future<void> _scheduleNotification(DateTime startUtc) async {
+		final endTime = startUtc.add(Duration(seconds: _plannedDurationSeconds));
+		await _notifService.scheduleAt(
+			id: _notificationId,
+			title: _sessionLabel(),
+			body: 'Session complete',
+			scheduledTime: endTime,
+		);
+	}
+
+	Future<void> _cancelNotification() async {
+		await _notifService.cancelNotification(_notificationId);
+	}
+
+	Future<void> _cancelFocusSessionNotification() async {
+		await _notifService
+				.cancelNotification(FocusSessionPrefs.focusNotificationId);
+	}
+
+	Future<void> _persistState() async {
+		try {
+			final box = Hive.box(StorageService.settingsBoxName);
+			await box.put(FocusSessionPrefs.sessionTypeKey, _sessionType.name);
+			await box.put(FocusSessionPrefs.sessionStartKey,
+					(_sessionStartUtc ?? DateTime.now().toUtc()).millisecondsSinceEpoch);
+			await box.put(FocusSessionPrefs.plannedDurationKey, _plannedDurationSeconds);
+			await box.put(FocusSessionPrefs.sessionIndexKey, _sessionIndex);
+			await box.put(_totalSessionsKey, _totalSessions);
+			await box.put(FocusSessionPrefs.isRunningKey, _isRunning);
+			await box.put(FocusSessionPrefs.isActiveKey, _isSessionActive);
+			await FocusSessionPrefs.writeSession(
+				sessionType: _sessionType.name,
+				sessionStartUtc: _sessionStartUtc ?? DateTime.now().toUtc(),
+				plannedDurationSeconds: _plannedDurationSeconds,
+				sessionIndex: _sessionIndex,
+				totalSessions: _totalSessions,
+				isRunning: _isRunning,
+				isActive: _isSessionActive,
+			);
+		} catch (_) {
+			// ignore persistence failures
+		}
+	}
+
+	Future<void> _loadPersistedState() async {
+		try {
+			final box = Hive.box(StorageService.settingsBoxName);
+			final storedType =
+					box.get(FocusSessionPrefs.sessionTypeKey) as String?;
+			final storedStart =
+					box.get(FocusSessionPrefs.sessionStartKey) as int?;
+			final storedPlanned =
+					box.get(FocusSessionPrefs.plannedDurationKey) as int?;
+			final storedIndex =
+					box.get(FocusSessionPrefs.sessionIndexKey) as int?;
+			final storedTotal = box.get(_totalSessionsKey) as int?;
+			final storedRunning =
+					box.get(FocusSessionPrefs.isRunningKey) as bool?;
+			final storedActive =
+					box.get(FocusSessionPrefs.isActiveKey) as bool?;
+
+			if (storedType != null) {
+				_sessionType = _SessionType.values.firstWhere(
+					(t) => t.name == storedType,
+					orElse: () => _SessionType.focus,
+				);
+			}
+			if (storedStart != null) {
+				_sessionStartUtc = DateTime.fromMillisecondsSinceEpoch(
+					storedStart,
+					isUtc: true,
+				);
+			}
+			_plannedDurationSeconds = storedPlanned ?? _currentSessionDuration().inSeconds;
+			_sessionIndex = storedIndex ?? _sessionIndex;
+			_totalSessions = storedTotal ?? _totalSessions;
+			_isRunning = storedRunning ?? false;
+			_isSessionActive = storedActive ?? _isRunning;
+		} catch (_) {
+			// ignore load failures
+		}
+		if (!mounted) return;
+		setState(() {
+			_remaining = _computeRemaining(nowUtc: DateTime.now().toUtc());
+			_isInitializing = false;
+		});
+		if (_isRunning) {
+			if (_remaining.inSeconds <= 0) {
+				_handleSessionComplete(DateTime.now().toUtc());
+			} else {
+				_startUiTimer();
+				_startFocusNotificationUpdates();
+			}
+		} else if (_isSessionActive) {
+			_syncFocusSessionNotification();
+		}
+	}
+
+	Future<void> _restoreAndRecompute() async {
+		await _loadPersistedState();
+		if (_isRunning) {
+			_updateRemaining(DateTime.now().toUtc());
+		}
+		if (_isRunning) {
+			_startFocusNotificationUpdates();
+		} else if (_isSessionActive) {
+			_syncFocusSessionNotification();
+		}
+	}
+
+	void _syncFocusSessionNotification() {
+		if (!_focusSessionNotificationsEnabled || !_isSessionActive) {
+			_cancelFocusSessionNotification();
+			return;
+		}
+		final remaining = _computeRemaining(nowUtc: DateTime.now().toUtc());
+		final minutesLeft = (remaining.inSeconds / 60).ceil().clamp(0, 9999);
+		final title = '${_sessionLabel()} • $minutesLeft min left';
+		final body = _focusSecondaryLine();
+		_notifService.showFocusSessionNotification(
+			id: FocusSessionPrefs.focusNotificationId,
+			title: title,
+			body: body,
+			remainingSeconds: remaining.inSeconds,
+			totalSeconds: _plannedDurationSeconds,
+			isRunning: _isRunning,
+		);
+	}
+
+	String _focusSecondaryLine() {
+		switch (_sessionType) {
+			case _SessionType.focus:
+				return 'Session $_sessionIndex of $_totalSessions • Deep focus session';
+			case _SessionType.shortBreak:
+				return 'Break time – relax';
+			case _SessionType.longBreak:
+				return 'Break time – recharge';
+		}
 	}
 
 	Widget _buildDurationControl(
@@ -516,6 +866,26 @@ class _PomodoroCardState extends State<_PomodoroCard> {
 	}
 
 	String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+	Future<void> _startForegroundService() async {
+		if (!Platform.isAndroid || !_focusSessionNotificationsEnabled) return;
+		final running = await FlutterForegroundTask.isRunningService;
+		if (!running) {
+			await FlutterForegroundTask.startService(
+				notificationTitle: _sessionLabel(),
+				notificationText: 'Updating focus session',
+				callback: startFocusForegroundTask,
+			);
+		}
+	}
+
+	Future<void> _stopForegroundService() async {
+		if (!Platform.isAndroid) return;
+		final running = await FlutterForegroundTask.isRunningService;
+		if (running) {
+			await FlutterForegroundTask.stopService();
+		}
+	}
 }
 
 enum _SessionType {

@@ -1,14 +1,35 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 
+enum FocusSessionAction {
+  toggle,
+  skip,
+}
+
 class NotifService {
   final notifPlugin = FlutterLocalNotificationsPlugin();
+
+  static const String focusSessionChannelId = 'focus_session';
+  static const String focusSessionChannelName = 'Focus Session';
+  static const String focusSessionChannelDescription =
+      'Persistent notifications for active focus sessions';
+  static const String focusSessionPayload = 'focus_session';
+  static const String focusSessionToggleAction = 'focus_toggle';
+  static const String focusSessionSkipAction = 'focus_skip';
+
+  final StreamController<FocusSessionAction> _focusActionController =
+      StreamController<FocusSessionAction>.broadcast();
 
   bool _isInitialized = false;
 
   bool get isInitialized => _isInitialized;
+
+  Stream<FocusSessionAction> get focusSessionActions =>
+      _focusActionController.stream;
 
 // Init
   Future<void> initNotification() async {
@@ -42,7 +63,11 @@ class NotifService {
       iOS: initSettingsiOS,
     );
 
-    await notifPlugin.initialize(initSettings);
+    await notifPlugin.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: _handleNotificationResponse,
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+    );
 
     // Use the same plugin instance to create the channel so platform
     // implementation sees the channel metadata we expect.
@@ -54,6 +79,16 @@ class NotifService {
         "Task Reminder B",
         description: "Reminder notifications for tasks v2",
         importance: Importance.max,
+      ),
+    );
+    await notifPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        focusSessionChannelId,
+        focusSessionChannelName,
+        description: focusSessionChannelDescription,
+        importance: Importance.low,
       ),
     );
     _isInitialized = true;
@@ -151,12 +186,115 @@ class NotifService {
     }
   }
 
+  Future<void> scheduleAt({
+    int id = 1,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    final localTime = scheduledTime.isUtc
+        ? scheduledTime.toLocal()
+        : scheduledTime;
+    final scheduledFor = tz.TZDateTime.from(localTime, tz.local);
+
+    try {
+      await notifPlugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledFor.isBefore(now)
+            ? scheduledFor.add(const Duration(seconds: 1))
+            : scheduledFor,
+        notificationDetails(),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (e, st) {
+      // ignore: avoid_print
+      print('NotifService: failed to scheduleAt notification: $e\n$st');
+    }
+  }
+
   Future<void> cancelNotification(int id) async {
     await notifPlugin.cancel(id);
+  }
+
+  Future<void> showFocusSessionNotification({
+    required int id,
+    required String title,
+    required String body,
+    required int remainingSeconds,
+    required int totalSeconds,
+    required bool isRunning,
+  }) async {
+    final clampedTotal = totalSeconds <= 0 ? 1 : totalSeconds;
+    final clampedRemaining = remainingSeconds < 0 ? 0 : remainingSeconds;
+    final progress = (clampedTotal - clampedRemaining).clamp(0, clampedTotal);
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        focusSessionChannelId,
+        focusSessionChannelName,
+        channelDescription: focusSessionChannelDescription,
+        importance: Importance.low,
+        priority: Priority.low,
+        playSound: false,
+        enableVibration: false,
+        onlyAlertOnce: true,
+        ongoing: true,
+        autoCancel: false,
+        showProgress: true,
+        maxProgress: clampedTotal,
+        progress: progress,
+        actions: [
+          AndroidNotificationAction(
+            focusSessionToggleAction,
+            isRunning ? 'Pause' : 'Continue',
+            showsUserInterface: true,
+            cancelNotification: false,
+          ),
+          const AndroidNotificationAction(
+            focusSessionSkipAction,
+            'Skip session',
+            showsUserInterface: true,
+            cancelNotification: false,
+          ),
+        ],
+      ),
+      iOS: const DarwinNotificationDetails(
+        presentAlert: false,
+        presentSound: false,
+      ),
+    );
+
+    await notifPlugin.show(
+      id,
+      title,
+      body,
+      details,
+      payload: focusSessionPayload,
+    );
   }
 
   Future<void> cancelAllNotifications() async {
     await notifPlugin.cancelAll();
   }
 
+  void _handleNotificationResponse(NotificationResponse response) {
+    if (response.actionId == focusSessionToggleAction) {
+      _focusActionController.add(FocusSessionAction.toggle);
+      return;
+    }
+    if (response.actionId == focusSessionSkipAction) {
+      _focusActionController.add(FocusSessionAction.skip);
+      return;
+    }
+  }
+
+}
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse response) {
+  //
 }
