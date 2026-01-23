@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/task.dart';
 import '../../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
 import 'task_editor_screen.dart';
@@ -18,6 +19,12 @@ class HomeScreen extends ConsumerWidget {
     final selectedFilter = ref.watch(taskFilterProvider);
     final today = DateTime.now();
     final formattedDate = DateFormat('EEEE, MMM d').format(today);
+    final filterLabels = <String, String>{
+      'all': 'All Tasks',
+      'today': 'Today',
+      'overdue': 'Overdue',
+      'upcoming': 'Upcoming',
+    };
 
     // Filter tasks based on selected filter
     final filteredTasksAsync = tasksAsync.whenData((tasks) {
@@ -77,12 +84,57 @@ class HomeScreen extends ConsumerWidget {
                 child: Text('Upcoming'),
               ),
             ],
-            icon: const Icon(Icons.filter_list),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(filterLabels[selectedFilter] ?? 'All Tasks'),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.expand_more),
+                ],
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {
-              // Add search functionality here
+            onPressed: () async {
+              final tasksValue = filteredTasksAsync;
+              final selectedTask = await tasksValue.when(
+                data: (tasks) => showSearch<Task?>(
+                  context: context,
+                  delegate: TaskSearchDelegate(
+                    tasks: tasks,
+                    ref: ref,
+                  ),
+                ),
+                loading: () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tasks are still loading.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return null;
+                },
+                error: (e, _) async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Search unavailable: $e'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return null;
+                },
+              );
+
+              if (selectedTask != null && context.mounted) {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TaskEditorScreen(task: selectedTask),
+                  ),
+                );
+              }
             },
           ),
         ],
@@ -130,6 +182,91 @@ class HomeScreen extends ConsumerWidget {
         heroTag: 'home_fab',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+class TaskSearchDelegate extends SearchDelegate<Task?> {
+  TaskSearchDelegate({
+    required this.tasks,
+    required this.ref,
+  });
+
+  final List<Task> tasks;
+  final WidgetRef ref;
+
+  @override
+  String get searchFieldLabel => 'Search tasks';
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(Icons.clear),
+          onPressed: () {
+            query = '';
+            showSuggestions(context);
+          },
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildTaskList(context, _filterTasks(query));
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildTaskList(context, _filterTasks(query));
+  }
+
+  List<Task> _filterTasks(String q) {
+    final normalized = q.trim().toLowerCase();
+    if (normalized.isEmpty) return tasks;
+    return tasks.where((task) {
+      final title = task.title.toLowerCase();
+      final notes = (task.notes ?? '').toLowerCase();
+      final tags = task.tags.join(' ').toLowerCase();
+      return title.contains(normalized) ||
+          notes.contains(normalized) ||
+          tags.contains(normalized);
+    }).toList();
+  }
+
+  Widget _buildTaskList(BuildContext context, List<Task> filtered) {
+    if (filtered.isEmpty) {
+      return const Center(child: Text('No matching tasks'));
+    }
+
+    return ListView.builder(
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final task = filtered[index];
+        return TaskTile(
+          key: ValueKey(task.id),
+          task: task,
+          animateOnComplete: true,
+          onToggleComplete: (checked) async {
+            await ref
+                .read(taskListProvider.notifier)
+                .toggleComplete(task, value: checked);
+          },
+          onTap: () => close(context, task),
+          onDelete: () async {
+            await ref.read(taskListProvider.notifier).delete(task);
+          },
+        );
+      },
     );
   }
 }

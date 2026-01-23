@@ -153,10 +153,10 @@ class _AppShellState extends ConsumerState<AppShell>
           },
           tabBackgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
           tabs: const [
-            GButton(icon: Icons.list_alt, text: 'Active'),
-            GButton(icon: Icons.checklist, text: 'Done'),
+            GButton(icon: Icons.task_alt, text: 'Tasks'),
+            GButton(icon: Icons.done_all, text: 'Completed'),
             GButton(icon: Icons.workspaces, text: 'Focus'),
-            GButton(icon: Icons.settings, text: 'Settings'),
+            GButton(icon: Icons.settings_suggest, text: 'Preferences'),
           ],
         ),
       ),

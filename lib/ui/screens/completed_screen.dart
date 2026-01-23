@@ -2,6 +2,7 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/task.dart';
 import '../../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
 import 'task_editor_screen.dart';
@@ -70,6 +71,48 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
       appBar: AppBar(
         title: const Text('Completed'),
         toolbarHeight: MediaQuery.of(context).size.height * 0.1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () async {
+              final selectedTask = await tasksAsync.when(
+                data: (tasks) => showSearch<Task?>(
+                  context: context,
+                  delegate: CompletedTaskSearchDelegate(
+                    tasks: tasks,
+                    ref: ref,
+                  ),
+                ),
+                loading: () async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tasks are still loading.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return null;
+                },
+                error: (e, _) async {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Search unavailable: $e'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return null;
+                },
+              );
+
+              if (selectedTask != null && mounted) {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => TaskEditorScreen(task: selectedTask),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
         ),
       body: Stack(
         children: [
@@ -156,6 +199,91 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class CompletedTaskSearchDelegate extends SearchDelegate<Task?> {
+  CompletedTaskSearchDelegate({
+    required this.tasks,
+    required this.ref,
+  });
+
+  final List<Task> tasks;
+  final WidgetRef ref;
+
+  @override
+  String get searchFieldLabel => 'Search completed tasks';
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          icon: const Icon(Icons.clear),
+          onPressed: () {
+            query = '';
+            showSuggestions(context);
+          },
+        ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    return _buildTaskList(context, _filterTasks(query));
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return _buildTaskList(context, _filterTasks(query));
+  }
+
+  List<Task> _filterTasks(String q) {
+    final normalized = q.trim().toLowerCase();
+    if (normalized.isEmpty) return tasks;
+    return tasks.where((task) {
+      final title = task.title.toLowerCase();
+      final notes = (task.notes ?? '').toLowerCase();
+      final tags = task.tags.join(' ').toLowerCase();
+      return title.contains(normalized) ||
+          notes.contains(normalized) ||
+          tags.contains(normalized);
+    }).toList();
+  }
+
+  Widget _buildTaskList(BuildContext context, List<Task> filtered) {
+    if (filtered.isEmpty) {
+      return const Center(child: Text('No matching tasks'));
+    }
+
+    return ListView.builder(
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final task = filtered[index];
+        return TaskTile(
+          key: ValueKey(task.id),
+          task: task,
+          animateOnUncomplete: true,
+          onToggleComplete: (checked) async {
+            await ref
+                .read(taskListProvider.notifier)
+                .toggleComplete(task, value: checked);
+          },
+          onTap: () => close(context, task),
+          onDelete: () async {
+            await ref.read(taskListProvider.notifier).delete(task);
+          },
+        );
+      },
     );
   }
 }
