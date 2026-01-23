@@ -10,6 +10,7 @@ import '../services/storage_service.dart';
 class SettingsState {
   const SettingsState({
     this.defaultReminderMinutes = 30,
+    this.defaultTaskTimeOffsetMinutes = 60,
     this.defaultPriority = Priority.medium,
     this.notificationsEnabled = true,
     this.focusSessionNotificationsEnabled = false,
@@ -19,6 +20,7 @@ class SettingsState {
   });
 
   final int defaultReminderMinutes;
+  final int defaultTaskTimeOffsetMinutes;
   final Priority defaultPriority;
   final bool notificationsEnabled;
   final bool focusSessionNotificationsEnabled;
@@ -28,6 +30,7 @@ class SettingsState {
 
   SettingsState copyWith({
     int? defaultReminderMinutes,
+    int? defaultTaskTimeOffsetMinutes,
     Priority? defaultPriority,
     bool? notificationsEnabled,
     bool? focusSessionNotificationsEnabled,
@@ -38,6 +41,8 @@ class SettingsState {
     return SettingsState(
       defaultReminderMinutes:
           defaultReminderMinutes ?? this.defaultReminderMinutes,
+      defaultTaskTimeOffsetMinutes:
+          defaultTaskTimeOffsetMinutes ?? this.defaultTaskTimeOffsetMinutes,
       defaultPriority: defaultPriority ?? this.defaultPriority,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       focusSessionNotificationsEnabled:
@@ -54,6 +59,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     try {
       final box = Hive.box(StorageService.settingsBoxName);
       final defaultReminder = box.get('defaultReminderMinutes') as int?;
+      final defaultTaskTimeOffset =
+          box.get('defaultTaskTimeOffsetMinutes') as int?;
       final defaultPriorityIndex = box.get('defaultPriority') as int?;
       final notificationsEnabled = box.get('notificationsEnabled') as bool?;
         final focusSessionNotificationsEnabled =
@@ -63,6 +70,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
       state = state.copyWith(
         defaultReminderMinutes: defaultReminder ?? state.defaultReminderMinutes,
+        defaultTaskTimeOffsetMinutes:
+            defaultTaskTimeOffset ?? state.defaultTaskTimeOffsetMinutes,
         defaultPriority: (defaultPriorityIndex != null && defaultPriorityIndex >= 0 && defaultPriorityIndex < Priority.values.length)
             ? Priority.values[defaultPriorityIndex]
             : state.defaultPriority,
@@ -91,6 +100,14 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     try {
       final box = Hive.box(StorageService.settingsBoxName);
       box.put('defaultReminderMinutes', minutes);
+    } catch (_) {}
+  }
+
+  void setDefaultTaskTimeOffsetMinutes(int minutes) {
+    state = state.copyWith(defaultTaskTimeOffsetMinutes: minutes);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('defaultTaskTimeOffsetMinutes', minutes);
     } catch (_) {}
   }
 

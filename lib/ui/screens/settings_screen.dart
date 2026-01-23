@@ -199,6 +199,8 @@ class SettingsScreen extends ConsumerWidget {
             subtitle: const Text('Show a persistent timer while focusing'),
 
           ),
+          const Divider(),
+          const ListTile(title: Text('Defaults')),
           ListTile(
             title: const Text('Default reminder'),
             subtitle: Text('${settings.defaultReminderMinutes} minutes before'),
@@ -233,6 +235,45 @@ class SettingsScreen extends ConsumerWidget {
                 ref
                     .read(settingsProvider.notifier)
                     .setReminderMinutes(result.clamp(0, 1440));
+              }
+            },
+          ),
+          ListTile(
+            title: const Text('Default task time'),
+            subtitle: Text(
+              '${settings.defaultTaskTimeOffsetMinutes} minutes from now',
+            ),
+            onTap: () async {
+              final controller = TextEditingController(
+                text: settings.defaultTaskTimeOffsetMinutes.toString(),
+              );
+              final result = await showDialog<int>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Default task time (minutes from now)'),
+                  content: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(
+                        context,
+                        int.tryParse(controller.text.trim()),
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+              if (result != null) {
+                ref
+                    .read(settingsProvider.notifier)
+                    .setDefaultTaskTimeOffsetMinutes(result.clamp(0, 1440));
               }
             },
           ),

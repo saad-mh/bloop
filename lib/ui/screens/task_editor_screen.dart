@@ -48,6 +48,18 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     super.dispose();
   }
 
+  TimeOfDay _defaultTimeOfDay() {
+    final settings = ref.read(settingsProvider);
+    final now = DateTime.now()
+        .add(Duration(minutes: settings.defaultTaskTimeOffsetMinutes));
+    return TimeOfDay.fromDateTime(now);
+  }
+
+  DateTime _applyDefaultTime(DateTime date) {
+    final time = _defaultTimeOfDay();
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -58,23 +70,41 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     );
     if (picked == null) return;
     if (!mounted) return;
-    if (_allDay) {
-      setState(() => _dueDateTime = DateTime(picked.year, picked.month, picked.day));
-      return;
-    }
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _dueDateTime != null
-          ? TimeOfDay.fromDateTime(_dueDateTime!)
-          : TimeOfDay.now(),
-    );
-    if (time == null) return;
-    if (!mounted) return;
     setState(() {
+      if (_allDay) {
+        _dueDateTime = DateTime(picked.year, picked.month, picked.day);
+        return;
+      }
+      final time = _dueDateTime != null
+          ? TimeOfDay.fromDateTime(_dueDateTime!)
+          : _defaultTimeOfDay();
       _dueDateTime = DateTime(
         picked.year,
         picked.month,
         picked.day,
+        time.hour,
+        time.minute,
+      );
+    });
+  }
+
+  Future<void> _pickTime() async {
+    final initial = _dueDateTime != null
+        ? TimeOfDay.fromDateTime(_dueDateTime!)
+        : _defaultTimeOfDay();
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (time == null) return;
+    if (!mounted) return;
+    setState(() {
+      final baseDate = _dueDateTime ?? DateTime.now();
+      _allDay = false;
+      _dueDateTime = DateTime(
+        baseDate.year,
+        baseDate.month,
+        baseDate.day,
         time.hour,
         time.minute,
       );
@@ -177,6 +207,9 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final dateText = _dueDateTime == null
         ? 'No date'
         : formatDueDate(_dueDateTime, allDay: _allDay);
+    final timeText = _dueDateTime == null
+        ? 'No time'
+        : (_allDay ? 'All day' : formatShortTime(_dueDateTime!));
     final reminderOptions = <Duration>[
       const Duration(minutes: 5),
       const Duration(minutes: 15),
@@ -208,27 +241,61 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Title *'),
+              decoration: InputDecoration(
+                labelText: 'Title',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              autofocus: true,
             ),
             const SizedBox(height: 8),
             TextField(
               controller: _notesController,
-              decoration: const InputDecoration(labelText: 'Notes'),
+              decoration: InputDecoration(
+                labelText: 'Notes',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
               maxLines: 3,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: Text('Due: $dateText')),
+                Expanded(child: Text('Date: $dateText')),
                 TextButton(
                   onPressed: _pickDate,
-                  child: const Text('Pick'),
+                  child: const Text('Pick date'),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(child: Text('Time: $timeText')),
+                TextButton(
+                  onPressed: _pickTime,
+                  child: const Text('Pick time'),
                 ),
               ],
             ),
             SwitchListTile(
               value: _allDay,
-              onChanged: (v) => setState(() => _allDay = v),
+              onChanged: (v) {
+                setState(() {
+                  _allDay = v;
+                  if (_dueDateTime == null) return;
+                  if (v) {
+                    _dueDateTime = DateTime(
+                      _dueDateTime!.year,
+                      _dueDateTime!.month,
+                      _dueDateTime!.day,
+                    );
+                  } else {
+                    _dueDateTime = _applyDefaultTime(_dueDateTime!);
+                  }
+                });
+              },
               title: const Text('All day'),
             ),
             DropdownButtonFormField<Recurrence>(

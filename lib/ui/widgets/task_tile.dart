@@ -199,7 +199,7 @@ class _TaskTileState extends State<TaskTile> {
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
-                                                timeText!,
+                                                timeText,
                                                 style: TextStyle(
                                                   color: isOverdue
                                                       ? overdueColor
