@@ -83,7 +83,7 @@ Signed APK builds will be provided here.
 
 | Version | Platform | Release Link |
 |-------|---------|---------------|
-| v1.0.1 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/latest)_ |
+| v1.0.3 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/latest)_ |
 
 ---
 
