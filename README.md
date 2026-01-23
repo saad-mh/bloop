@@ -81,9 +81,9 @@ There is no fixed roadmap or release schedule.
 
 Signed APK builds will be provided here.
 
-| Version | Platform | Release Link | SHA |
-|-------|---------|---------------|--------|
-| v1.0.1 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/tag/Release)_ | _[SHA](https://github.com/saad-mh/bloop/releases/download/Release/bloop1.0.1.apk.sha1)_ |
+| Version | Platform | Release Link |
+|-------|---------|---------------|
+| v1.0.3 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/latest)_ |
 
 ---
 
