@@ -70,10 +70,10 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
       await _notifications.cancelMany(currentIds);
       // Debug: log scheduling attempt
       // ignore: avoid_print
-      print('TaskNotifier: scheduling reminder for task=${task.id} title=${task.title}');
+      // print('TaskNotifier: scheduling reminder for task=${task.id} title=${task.title}');
       final newIds = await _notifications.scheduleReminders(task);
       // ignore: avoid_print
-      print('TaskNotifier: schedule result ids=$newIds');
+      // print('TaskNotifier: schedule result ids=$newIds');
       final toSave = task.copyWith(
         notificationIds: newIds ?? task.notificationIds,
         notificationId: newIds != null && newIds.isNotEmpty
@@ -132,6 +132,76 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   Future<void> importJson(String json) async {
     try {
       await _storage.importFromJson(json);
+      await load();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> clearAll() async {
+    try {
+      final tasks = _storage.getAll();
+      for (final task in tasks) {
+        await _notifications.cancelMany(
+          task.notificationIds ??
+              (task.notificationId != null ? [task.notificationId!] : null),
+        );
+      }
+      await _storage.clearAllTasks();
+      await load();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> addDemoTasks() async {
+    try {
+      final now = DateTime.now();
+      final todayMorning = DateTime(now.year, now.month, now.day, 9, 0);
+      final todayEvening = DateTime(now.year, now.month, now.day, 18, 0);
+
+      final demoTasks = <Task>[
+        Task(
+          title: 'Submit report',
+          notes: 'Send weekly report to the team',
+          dueDateTime: now.subtract(const Duration(days: 1, hours: 2)),
+          priority: Priority.high,
+        ),
+        Task(
+          title: 'Call dentist',
+          dueDateTime: now.subtract(const Duration(days: 2)),
+          priority: Priority.medium,
+        ),
+        Task(
+          title: 'Standup prep',
+          dueDateTime: todayMorning.add(const Duration(hours: 1)),
+          priority: Priority.high,
+        ),
+        Task(
+          title: 'Grocery run',
+          dueDateTime: todayEvening,
+          priority: Priority.low,
+        ),
+        Task(
+          title: 'Plan sprint',
+          dueDateTime: now.add(const Duration(days: 1, hours: 3)),
+          priority: Priority.medium,
+        ),
+        Task(
+          title: 'Book flights',
+          dueDateTime: now.add(const Duration(days: 7, hours: 2)),
+          priority: Priority.low,
+        ),
+        Task(
+          title: 'Annual review',
+          dueDateTime: now.add(const Duration(days: 30)),
+          priority: Priority.high,
+        ),
+      ];
+
+      for (final task in demoTasks) {
+        await addOrUpdate(task);
+      }
       await load();
     } catch (e, st) {
       state = AsyncValue.error(e, st);

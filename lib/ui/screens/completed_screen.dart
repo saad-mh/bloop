@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,51 +6,155 @@ import '../../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
 import 'task_editor_screen.dart';
 
-class CompletedScreen extends ConsumerWidget {
+class CompletedScreen extends ConsumerStatefulWidget {
   const CompletedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CompletedScreen> createState() => _CompletedScreenState();
+}
+
+class _CompletedScreenState extends ConsumerState<CompletedScreen> {
+  late final ConfettiController _confettiController;
+  DateTime? _lastCelebratedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _maybeCelebrate({
+    required DateTime today,
+    required bool allComplete,
+  }) {
+    if (!allComplete) return;
+    final dayKey = DateTime(today.year, today.month, today.day);
+    if (_lastCelebratedDay == dayKey) return;
+    _lastCelebratedDay = dayKey;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _confettiController.play();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final tasksAsync = ref.watch(completedTasksProvider);
+    final allTasksAsync = ref.watch(taskListProvider);
+    final allTasks = allTasksAsync.asData?.value ?? const [];
+    final today = DateTime.now();
+    bool isSameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+    final todayTasks = allTasks
+        .where(
+          (t) =>
+              t.dueDateTime != null &&
+              isSameDay(t.dueDateTime!.toLocal(), today),
+        )
+        .toList();
+    final completedToday = todayTasks.where((t) => t.isCompleted).length;
+    final allTodayComplete =
+        todayTasks.isNotEmpty && completedToday == todayTasks.length;
+    final showTodaySummary = todayTasks.isNotEmpty && completedToday > 0;
+    _maybeCelebrate(today: today, allComplete: allTodayComplete);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Completed'),
         toolbarHeight: MediaQuery.of(context).size.height * 0.1,
         ),
-      body: tasksAsync.when(
-        data: (tasks) {
-          if (tasks.isEmpty) {
-            return const Center(child: Text('Nothing completed yet'));
-          }
-          return ListView.builder(
-            itemCount: tasks.length,
-            itemBuilder: (context, index) {
-              final task = tasks[index];
-              return TaskTile(
-                key: ValueKey(task.id),
-                task: task,
-                animateOnUncomplete: true,
-                onToggleComplete: (checked) async {
-                  await ref
-                      .read(taskListProvider.notifier)
-                      .toggleComplete(task, value: checked);
-                },
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => TaskEditorScreen(task: task),
-                    ),
+      body: Stack(
+        children: [
+          tasksAsync.when(
+            data: (tasks) {
+              if (tasks.isEmpty) {
+                return const Center(child: Text('Nothing completed yet'));
+              }
+              return ListView.builder(
+                itemCount: tasks.length + (showTodaySummary ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (showTodaySummary && index == 0) {
+                    final progress = todayTasks.isEmpty
+                        ? 0.0
+                        : completedToday / todayTasks.length;
+                    return Card(
+                      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              allTodayComplete
+                                  ? 'Good Job'
+                                  : "Today's progress",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              allTodayComplete
+                                  ? "On completing all of today's tasks"
+                                  : '$completedToday of ${todayTasks.length} tasks completed',
+                            ),
+                            const SizedBox(height: 10),
+                            LinearProgressIndicator(
+                              value: progress,
+                              year2023: false,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final taskIndex = showTodaySummary ? index - 1 : index;
+                  final task = tasks[taskIndex];
+                  return TaskTile(
+                    key: ValueKey(task.id),
+                    task: task,
+                    animateOnUncomplete: true,
+                    onToggleComplete: (checked) async {
+                      await ref
+                          .read(taskListProvider.notifier)
+                          .toggleComplete(task, value: checked);
+                    },
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TaskEditorScreen(task: task),
+                        ),
+                      );
+                    },
+                    onDelete: () async {
+                      await ref.read(taskListProvider.notifier).delete(task);
+                    },
                   );
-                },
-                onDelete: () async {
-                  await ref.read(taskListProvider.notifier).delete(task);
                 },
               );
             },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+            loading: () => const Center(child: CircularProgressIndicator(year2023: false,)),
+            error: (e, _) => Center(child: Text('Error: $e')),
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              emissionFrequency: 0.03,
+              numberOfParticles: 24,
+              gravity: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -39,6 +39,10 @@ class StorageService {
     await _box.delete(id);
   }
 
+  Future<void> clearAllTasks() async {
+    await _box.clear();
+  }
+
   Future<void> toggleComplete(String id, {bool? value}) async {
     final task = _box.get(id);
     if (task == null) return;

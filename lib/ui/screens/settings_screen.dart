@@ -241,6 +241,53 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const Divider(),
+          const ListTile(
+            title: Text('Debug'),
+          ),
+          ListTile(
+            title: const Text('Add demo tasks'),
+            subtitle: const Text('Overdue, today, and future tasks with mixed priorities'),
+            onTap: () async {
+              await ref.read(taskListProvider.notifier).addDemoTasks();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Demo tasks added')),
+                );
+              }
+            },
+          ),
+          ListTile(
+            title: const Text('Clear all tasks'),
+            subtitle: const Text('Delete every task in the list'),
+            onTap: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Clear all tasks'),
+                  content: const Text('This will delete all tasks. Continue?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Clear'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await ref.read(taskListProvider.notifier).clearAll();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('All tasks cleared')),
+                  );
+                }
+              }
+            },
+          ),
+          const Divider(),
           ListTile(
             title: const Text('Export data'),
             subtitle: const Text('Copy JSON to clipboard'),

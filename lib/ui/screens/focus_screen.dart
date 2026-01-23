@@ -314,13 +314,14 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 										alignment: Alignment.center,
 										children: [
 											SizedBox(
-												width: 180,
-												height: 180,
+												width: 190,
+												height: 190,
 												child: CircularProgressIndicator(
 													value: value,
 													strokeWidth: 10,
 													color: scheme.primary,
 													backgroundColor: scheme.surfaceVariant,
+                          year2023: false,
 												),
 											),
 											_buildAnimatedTime(
@@ -778,6 +779,7 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 									controller.text = newValue.toString();
 									onChanged(newValue);
 								},
+                year2023: false,
 							),
 						),
 						SizedBox(
@@ -957,6 +959,7 @@ class FocusedTodayCard extends StatelessWidget {
 													minHeight: 6,
 													backgroundColor: scheme.surfaceVariant,
 													color: scheme.primary,
+                          year2023: false,
 												),
 											),
 										),
