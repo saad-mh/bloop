@@ -85,7 +85,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Title is required')));
+          .showSnackBar(const SnackBar(content: Text('Title is required'), behavior: SnackBarBehavior.floating,));
       return;
     }
     final settings = ref.read(settingsProvider);
@@ -113,7 +113,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
     if (_dueDateTime == null && reminders.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a due date to schedule reminders.')),
+        const SnackBar(content: Text('Pick a due date to schedule reminders.'), behavior: SnackBarBehavior.floating,),
       );
       return;
     }
@@ -145,7 +145,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       if (!hasFutureTime) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All notifications are in the past. Please choose a future time.')),
+          const SnackBar(content: Text('All notifications are in the past. Please choose a future time.'), behavior: SnackBarBehavior.floating,),
         );
         return;
       }
@@ -159,12 +159,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         SnackBar(
           content: const Text('Some required permissions are missing.'),
           action: SnackBarAction(
-            label: 'Open settings',
+            label: 'gimme permissions',
             onPressed: () async {
               await NotificationService.instance.requestExactAlarmPermission();
               await NotificationService.instance.openNotificationSettings();
             },
           ),
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }

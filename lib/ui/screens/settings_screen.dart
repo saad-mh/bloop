@@ -39,7 +39,8 @@ class SettingsScreen extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, ThemeMode.system),
+                            onPressed: () =>
+                                Navigator.pop(context, ThemeMode.system),
                             child: Row(
                               children: const [
                                 Icon(Icons.settings),
@@ -49,7 +50,8 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                           ),
                           SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, ThemeMode.light),
+                            onPressed: () =>
+                                Navigator.pop(context, ThemeMode.light),
                             child: Row(
                               children: const [
                                 Icon(Icons.wb_sunny),
@@ -59,7 +61,8 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                           ),
                           SimpleDialogOption(
-                            onPressed: () => Navigator.pop(context, ThemeMode.dark),
+                            onPressed: () =>
+                                Navigator.pop(context, ThemeMode.dark),
                             child: Row(
                               children: const [
                                 Icon(Icons.nights_stay),
@@ -78,7 +81,10 @@ class SettingsScreen extends ConsumerWidget {
                 ref.read(settingsProvider.notifier).setThemeMode(result);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Theme updated')),
+                    const SnackBar(
+                      content: Text('Theme updated'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
                   );
                 }
               }
@@ -119,7 +125,9 @@ class SettingsScreen extends ConsumerWidget {
                                   shape: BoxShape.circle,
                                   border: Border.all(
                                     color: settings.seedColor == c
-                                        ? (settings.themeMode == ThemeMode.dark ? Colors.white : Colors.black)
+                                        ? (settings.themeMode == ThemeMode.dark
+                                              ? Colors.white
+                                              : Colors.black)
                                         : Colors.transparent,
                                     width: 3,
                                   ),
@@ -136,7 +144,7 @@ class SettingsScreen extends ConsumerWidget {
                 ref.read(settingsProvider.notifier).setSeedColor(result);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Accent color updated')),
+                    const SnackBar(content: Text('Accent color updated'), behavior: SnackBarBehavior.floating,),
                   );
                 }
               }
@@ -151,10 +159,18 @@ class SettingsScreen extends ConsumerWidget {
                 context: context,
                 builder: (_) => AlertDialog(
                   title: const Text('Reset settings'),
-                  content: const Text('Are you sure you want to reset all settings to defaults?'),
+                  content: const Text(
+                    'Are you sure you want to reset all settings to defaults?',
+                  ),
                   actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Reset')),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Reset'),
+                    ),
                   ],
                 ),
               );
@@ -162,7 +178,7 @@ class SettingsScreen extends ConsumerWidget {
                 ref.read(settingsProvider.notifier).resetDefaults();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings reset to defaults')),
+                    const SnackBar(content: Text('Settings reset to defaults'), behavior: SnackBarBehavior.floating,),
                   );
                 }
               }
@@ -181,13 +197,15 @@ class SettingsScreen extends ConsumerWidget {
                 .setFocusSessionNotificationsEnabled(v),
             title: const Text('Focus session notification'),
             subtitle: const Text('Show a persistent timer while focusing'),
+
           ),
           ListTile(
             title: const Text('Default reminder'),
             subtitle: Text('${settings.defaultReminderMinutes} minutes before'),
             onTap: () async {
               final controller = TextEditingController(
-                  text: settings.defaultReminderMinutes.toString());
+                text: settings.defaultReminderMinutes.toString(),
+              );
               final result = await showDialog<int>(
                 context: context,
                 builder: (_) => AlertDialog(
@@ -241,17 +259,17 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const Divider(),
-          const ListTile(
-            title: Text('Debug'),
-          ),
+          const ListTile(title: Text('Debug')),
           ListTile(
             title: const Text('Add demo tasks'),
-            subtitle: const Text('Overdue, today, and future tasks with mixed priorities'),
+            subtitle: const Text(
+              'Overdue, today, and future tasks with mixed priorities',
+            ),
             onTap: () async {
               await ref.read(taskListProvider.notifier).addDemoTasks();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Demo tasks added')),
+                  const SnackBar(content: Text('Demo tasks added'), behavior: SnackBarBehavior.floating,),
                 );
               }
             },
@@ -281,7 +299,7 @@ class SettingsScreen extends ConsumerWidget {
                 await ref.read(taskListProvider.notifier).clearAll();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('All tasks cleared')),
+                    const SnackBar(content: Text('All tasks cleared'), behavior: SnackBarBehavior.floating,),
                   );
                 }
               }
@@ -296,7 +314,7 @@ class SettingsScreen extends ConsumerWidget {
               await Clipboard.setData(ClipboardData(text: data));
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Exported to clipboard')),
+                  const SnackBar(content: Text('Exported to clipboard'), behavior: SnackBarBehavior.floating,),
                 );
               }
             },
@@ -312,8 +330,9 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Import JSON'),
                   content: TextField(
                     controller: controller,
-                    decoration:
-                        const InputDecoration(hintText: 'Paste JSON here'),
+                    decoration: const InputDecoration(
+                      hintText: 'Paste JSON here',
+                    ),
                     maxLines: 6,
                   ),
                   actions: [
@@ -333,7 +352,7 @@ class SettingsScreen extends ConsumerWidget {
                 await ref.read(taskListProvider.notifier).importJson(json);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Import completed')),
+                    const SnackBar(content: Text('Import completed'), behavior: SnackBarBehavior.floating,),
                   );
                 }
               }
