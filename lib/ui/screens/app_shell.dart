@@ -139,25 +139,35 @@ class _AppShellState extends ConsumerState<AppShell>
       ),
       bottomNavigationBar: SafeArea(
         top: false,
-        child: GNav(
-          haptic: true,
-          gap: 8,
-          // rippleColor: settings.themeMode == ThemeMode.dark
-          //     ? Colors.grey.shade800
-          //     : Colors.grey.shade300,
-          iconSize: 24,
-          selectedIndex: _index,
-          onTabChange: (i) {
-            setState(() => _index = i);
-            ref.read(settingsProvider.notifier).setLastTabIndex(i);
-          },
-          tabBackgroundColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1),
-          tabs: const [
-            GButton(icon: Icons.task_alt, text: 'Tasks'),
-            GButton(icon: Icons.done_all, text: 'Completed'),
-            GButton(icon: Icons.workspaces, text: 'Focus'),
-            GButton(icon: Icons.settings_suggest, text: 'Preferences'),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: GNav(
+            haptic: true,
+            gap: 6,
+            // rippleColor: settings.themeMode == ThemeMode.dark
+            //     ? Colors.grey.shade800
+            //     : Colors.grey.shade300,
+            iconSize: 24,
+            textSize: 12,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+            tabMargin: const EdgeInsets.symmetric(horizontal: 4),
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            selectedIndex: _index,
+            onTabChange: (i) {
+              setState(() => _index = i);
+              ref.read(settingsProvider.notifier).setLastTabIndex(i);
+            },
+            tabBackgroundColor: Theme.of(context)
+                .colorScheme
+                .primaryContainer
+                .withOpacity(0.1),
+            tabs: const [
+              GButton(icon: Icons.task_alt, text: 'Tasks'),
+              GButton(icon: Icons.done_all, text: 'Completed'),
+              GButton(icon: Icons.workspaces, text: 'Focus'),
+              GButton(icon: Icons.settings_suggest, text: 'Preferences'),
+            ],
+          ),
         ),
       ),
     );
