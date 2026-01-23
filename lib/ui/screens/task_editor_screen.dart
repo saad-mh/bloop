@@ -204,11 +204,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final dateText = _dueDateTime == null
-        ? 'No date'
-        : formatDueDate(_dueDateTime, allDay: _allDay);
+      ? 'No date chosen'
+        : formatDueDate(_dueDateTime, allDay: true);
     final timeText = _dueDateTime == null
-        ? 'No time'
+      ? 'No time chosen'
         : (_allDay ? 'All day' : formatShortTime(_dueDateTime!));
     final reminderOptions = <Duration>[
       const Duration(minutes: 5),
@@ -225,6 +226,19 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
             ? maxReminders
             : _reminders.length + 1);
 
+    final inputDecoration = InputDecoration(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      filled: true,
+      fillColor: colorScheme.surfaceContainerHighest,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
@@ -239,181 +253,245 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+            Card(
+              elevation: 0,
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _notesController,
-              decoration: InputDecoration(
-                labelText: 'Notes',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(child: Text('Date: $dateText')),
-                TextButton(
-                  onPressed: _pickDate,
-                  child: const Text('Pick date'),
-                ),
-              ],
-            ),
-            Row(
-              children: [
-                Expanded(child: Text('Time: $timeText')),
-                TextButton(
-                  onPressed: _pickTime,
-                  child: const Text('Pick time'),
-                ),
-              ],
-            ),
-            SwitchListTile(
-              value: _allDay,
-              onChanged: (v) {
-                setState(() {
-                  _allDay = v;
-                  if (_dueDateTime == null) return;
-                  if (v) {
-                    _dueDateTime = DateTime(
-                      _dueDateTime!.year,
-                      _dueDateTime!.month,
-                      _dueDateTime!.day,
-                    );
-                  } else {
-                    _dueDateTime = _applyDefaultTime(_dueDateTime!);
-                  }
-                });
-              },
-              title: const Text('All day'),
-            ),
-            DropdownButtonFormField<Recurrence>(
-              initialValue: _recurrence,
-              items: Recurrence.values
-                  .map((r) => DropdownMenuItem(
-                        value: r,
-                        child: Text(r.name),
-                      ))
-                  .toList(),
-              onChanged: (r) => setState(() => _recurrence = r ?? Recurrence.none),
-              decoration: const InputDecoration(labelText: 'Repeat'),
-            ),
-            DropdownButtonFormField<Priority>(
-              initialValue: _priority,
-              items: Priority.values
-                  .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(p.name),
-                      ))
-                  .toList(),
-              onChanged: (p) => setState(() => _priority = p ?? Priority.medium),
-              decoration: const InputDecoration(labelText: 'Priority'),
-            ),
-            for (var i = 0; i < shownReminderCount; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: DropdownButtonFormField<Duration?>(
-                        value: i < _reminders.length ? _reminders[i] : null,
-                        items: [
-                          const DropdownMenuItem<Duration?>(
-                            value: null,
-                            child: Text('No reminder'),
-                          ),
-                          ...reminderOptions
-                              .where((option) =>
-                                  !_reminders.contains(option) ||
-                                  (i < _reminders.length && _reminders[i] == option))
-                              .map((option) => DropdownMenuItem<Duration?>(
-                                    value: option,
-                                    child: Text(_formatReminder(option)),
-                                  )),
-                        ],
-                        onChanged: (value) {
-                          setState(() {
-                            if (value == null) {
-                              if (i < _reminders.length) {
-                                _reminders.removeAt(i);
-                              }
-                              return;
-                            }
-                            if (i < _reminders.length) {
-                              _reminders[i] = value;
-                            } else if (_reminders.length < maxReminders) {
-                              _reminders.add(value);
-                            }
-                          });
-                        },
-                        decoration: InputDecoration(
-                          labelText: i == 0 ? 'Reminder' : 'Reminder ${i + 1}',
-                        ),
-                      ),
+                    TextField(
+                      controller: _titleController,
+                      decoration: inputDecoration.copyWith(labelText: 'Title'),
+                      autofocus: true,
+                      textInputAction: TextInputAction.next,
                     ),
-                    if (i > 0 && i < _reminders.length)
-                      IconButton(
-                        tooltip: 'Remove reminder',
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => _reminders.removeAt(i)),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _notesController,
+                      decoration: inputDecoration.copyWith(labelText: 'Notes'),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Schedule', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _pickDate,
+                            child: Text(dateText),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _pickTime,
+                            child: Text(timeText),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile.adaptive(
+                      value: _allDay,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (v) {
+                        setState(() {
+                          _allDay = v;
+                          if (_dueDateTime == null) return;
+                          if (v) {
+                            _dueDateTime = DateTime(
+                              _dueDateTime!.year,
+                              _dueDateTime!.month,
+                              _dueDateTime!.day,
+                            );
+                          } else {
+                            _dueDateTime = _applyDefaultTime(_dueDateTime!);
+                          }
+                        });
+                      },
+                      title: const Text('All day'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Type', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: Priority.values.map((priority) {
+                        final selected = _priority == priority;
+                        return ChoiceChip(
+                          label: Text(priority.name),
+                          selected: selected,
+                          onSelected: (_) => setState(() => _priority = priority),
+                        );
+                      }).toList(),
+                    ),
+                    
+                    const SizedBox(height: 14),
+                    DropdownButtonFormField<Recurrence>(
+                      initialValue: _recurrence,
+                      items: Recurrence.values
+                          .map((r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(r.name),
+                              ))
+                          .toList(),
+                      onChanged: (r) =>
+                          setState(() => _recurrence = r ?? Recurrence.none),
+                      decoration: inputDecoration.copyWith(labelText: 'Repeat'),
+                      icon: const Icon(Icons.expand_more),
+                    ),
+                    const SizedBox(height: 12),
+                    for (var i = 0; i < shownReminderCount; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<Duration?>(
+                                value: i < _reminders.length ? _reminders[i] : null,
+                                items: [
+                                  const DropdownMenuItem<Duration?>(
+                                    value: null,
+                                    child: Text('No reminder'),
+                                  ),
+                                  ...reminderOptions
+                                      .where((option) =>
+                                          !_reminders.contains(option) ||
+                                          (i < _reminders.length &&
+                                              _reminders[i] == option))
+                                      .map((option) => DropdownMenuItem<Duration?>(
+                                            value: option,
+                                            child: Text(_formatReminder(option)),
+                                          )),
+                                ],
+                                onChanged: (value) {
+                                  setState(() {
+                                    if (value == null) {
+                                      if (i < _reminders.length) {
+                                        _reminders.removeAt(i);
+                                      }
+                                      return;
+                                    }
+                                    if (i < _reminders.length) {
+                                      _reminders[i] = value;
+                                    } else if (_reminders.length < maxReminders) {
+                                      _reminders.add(value);
+                                    }
+                                  });
+                                },
+                                decoration: inputDecoration.copyWith(
+                                  labelText: i == 0 ? 'Reminder' : 'Reminder ${i + 1}',
+                                ),
+                                icon: const Icon(Icons.expand_more),
+                              ),
+                            ),
+                            if (i > 0 && i < _reminders.length)
+                              IconButton(
+                                tooltip: 'Remove reminder',
+                                icon: const Icon(Icons.close),
+                                onPressed: () =>
+                                    setState(() => _reminders.removeAt(i)),
+                              ),
+                          ],
+                        ),
                       ),
                   ],
                 ),
               ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final tag in _tags)
-                    Chip(
-                      label: Text(tag),
-                      onDeleted: () => setState(() => _tags.remove(tag)),
-                    ),
-                  ActionChip(
-                    label: const Text('Add tag'),
-                    onPressed: () async {
-                      final controller = TextEditingController();
-                      final result = await showDialog<String>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: const Text('New tag'),
-                          content: TextField(
-                            controller: controller,
-                            decoration: const InputDecoration(hintText: 'Tag'),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(
-                                  context, controller.text.trim()),
-                              child: const Text('Add'),
-                            ),
-                          ],
+            ),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 0,
+              color: colorScheme.surfaceContainerLowest,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final tag in _tags)
+                        Chip(
+                          label: Text(tag),
+                          onDeleted: () => setState(() => _tags.remove(tag)),
                         ),
-                      );
-                      if (result != null && result.isNotEmpty) {
-                        setState(() => _tags.add(result));
-                      }
-                    },
+                      ActionChip(
+                        label: const Text('Add tag'),
+                        onPressed: () async {
+                          final controller = TextEditingController();
+                          final result = await showDialog<String>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: const Text('New tag'),
+                              content: TextField(
+                                controller: controller,
+                                decoration: inputDecoration.copyWith(
+                                  labelText: 'Tag',
+                                  fillColor: colorScheme.surface,
+                                ),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                FilledButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, controller.text.trim()),
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (result != null && result.isNotEmpty) {
+                            setState(() => _tags.add(result));
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
