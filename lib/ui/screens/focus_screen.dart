@@ -236,9 +236,6 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 
 	@override
 	Widget build(BuildContext context) {
-		// Register settings listener once. Some Riverpod versions restrict
-		// `ref.listen` to be used from the build method of consumer widgets;
-		// registering here ensures we comply while only registering once.
 		if (!_registeredSettingsListener) {
 			_registeredSettingsListener = true;
 			ref.listen<SettingsState>(settingsProvider, (previous, next) {
@@ -448,7 +445,7 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 							),
 							child: Column(
 								mainAxisSize: MainAxisSize.min,
-								crossAxisAlignment: CrossAxisAlignment.start,
+								crossAxisAlignment: CrossAxisAlignment.center,
 								children: [
 									Text(
 										'Pomodoro settings',
@@ -457,7 +454,7 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 									const SizedBox(height: 16),
 									_buildDurationControl(
 										context,
-										label: 'Custom focus duration (minutes)',
+										label: 'Custom focus duration (mins)',
 										min: 5,
 										max: 60,
 										value: focusMinutes,
@@ -467,7 +464,7 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 									const SizedBox(height: 12),
 									_buildDurationControl(
 										context,
-										label: 'Custom short break duration (minutes)',
+										label: 'Custom short break duration (mins)',
 										min: 1,
 										max: 20,
 										value: shortMinutes,
@@ -477,7 +474,7 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 									const SizedBox(height: 12),
 									_buildDurationControl(
 										context,
-										label: 'Custom long break duration (minutes)',
+										label: 'Custom long break duration (mins)',
 										min: 5,
 										max: 30,
 										value: longMinutes,
@@ -488,7 +485,10 @@ class _PomodoroCardState extends ConsumerState<_PomodoroCard> with WidgetsBindin
 									TextField(
 										controller: sessionsController,
 										keyboardType: TextInputType.number,
-										decoration: const InputDecoration(
+										decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
 											labelText: 'Sessions per cycle',
 										),
 									),
