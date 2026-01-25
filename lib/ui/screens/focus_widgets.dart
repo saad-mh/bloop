@@ -7,6 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
 import 'focus_controller.dart';
+import '../../models/scenery_config.dart';
 
 class PomodoroCard extends ConsumerStatefulWidget {
 	const PomodoroCard({super.key});
@@ -822,37 +823,48 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 		FocusController controller,
 	) async {
 		_controlsTimer?.cancel();
-		final options = _soundOptions;
+		final options = focusSoundAssets;
 		var selected = controller.selectedSound;
 		await showModalBottomSheet<void>(
 			context: context,
 			showDragHandle: true,
 			builder: (context) {
-				return Padding(
-					padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						crossAxisAlignment: CrossAxisAlignment.start,
-						children: [
-							Text(
-								'Change sound',
-								style: Theme.of(context).textTheme.titleMedium,
-							),
-							const SizedBox(height: 8),
-							...options.map(
-								(option) => RadioListTile<String>(
-									value: option,
-									groupValue: selected,
-									title: Text(option),
-									onChanged: (value) {
-										selected = value ?? selected;
-										Navigator.pop(context);
-									},
+					final maxHeight = MediaQuery.of(context).size.height * 0.6;
+					return SafeArea(
+						child: SizedBox(
+							height: maxHeight,
+							child: Padding(
+								padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.start,
+									children: [
+										Text(
+											'Change sound',
+											style: Theme.of(context).textTheme.titleMedium,
+										),
+										const SizedBox(height: 8),
+										Expanded(
+											child: ListView(
+												children: options.entries
+													.map(
+														(entry) => RadioListTile<String>(
+															value: entry.key,
+															groupValue: selected,
+															title: Text(entry.key),
+															onChanged: (value) {
+																selected = value ?? selected;
+																Navigator.pop(context);
+															},
+														),
+													)
+													.toList(growable: false),
+											),
+										),
+									],
 								),
 							),
-						],
-					),
-				);
+						),
+					);
 			},
 		);
 		controller.setSelectedSound(selected);
@@ -870,31 +882,42 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 			context: context,
 			showDragHandle: true,
 			builder: (context) {
-				return Padding(
-					padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						crossAxisAlignment: CrossAxisAlignment.start,
-						children: [
-							Text(
-								'Change scenery',
-								style: Theme.of(context).textTheme.titleMedium,
-							),
-							const SizedBox(height: 8),
-							...options.map(
-								(option) => RadioListTile<String>(
-									value: option,
-									groupValue: selected,
-									title: Text(option),
-									onChanged: (value) {
-										selected = value ?? selected;
-										Navigator.pop(context);
-									},
+					final maxHeight = MediaQuery.of(context).size.height * 0.6;
+					return SafeArea(
+						child: SizedBox(
+							height: maxHeight,
+							child: Padding(
+								padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.start,
+									children: [
+										Text(
+											'Change scenery',
+											style: Theme.of(context).textTheme.titleMedium,
+										),
+										const SizedBox(height: 8),
+										Expanded(
+											child: ListView(
+												children: options
+													.map(
+														(option) => RadioListTile<String>(
+															value: option,
+															groupValue: selected,
+															title: Text(option),
+															onChanged: (value) {
+																selected = value ?? selected;
+																Navigator.pop(context);
+															},
+														),
+													)
+													.toList(growable: false),
+											),
+										),
+									],
 								),
 							),
-						],
-					),
-				);
+						),
+					);
 			},
 		);
 		controller.setSelectedScenery(selected);
@@ -1173,45 +1196,79 @@ class _FocusSceneryBackground extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
-		final gradient = _sceneryGradients[sceneryKey] ?? _sceneryGradients.values.first;
-		return Container(
-			decoration: BoxDecoration(
-				gradient: enabled
-					? LinearGradient(
-						begin: Alignment.topLeft,
-						end: Alignment.bottomRight,
-						colors: gradient,
-					)
-					: LinearGradient(
+		final config = _sceneryConfigs[sceneryKey] ?? _sceneryConfigs.values.first;
+		if (!enabled) {
+			return Container(
+				decoration: BoxDecoration(
+					gradient: LinearGradient(
 						begin: Alignment.topLeft,
 						end: Alignment.bottomRight,
 						colors: [scheme.surface, scheme.surfaceVariant],
 					),
-			),
-		);
+				),
+			);
+		}
+		switch (config.type) {
+			case SceneryType.gradient:
+				final colors = config.colors ?? [scheme.surface, scheme.surfaceVariant];
+				return Container(
+					decoration: BoxDecoration(
+						gradient: LinearGradient(
+							begin: Alignment.topLeft,
+							end: Alignment.bottomRight,
+							colors: colors,
+						),
+					),
+				);
+			case SceneryType.image:
+				final assetPath = config.assetPath;
+				if (assetPath == null || assetPath.isEmpty) {
+					return Container(color: scheme.surface);
+				}
+				return Stack(
+					fit: StackFit.expand,
+					children: [
+						Image.asset(
+							assetPath,
+							fit: BoxFit.cover,
+						),
+					],
+				);
+		}
 	}
 }
 
-const List<String> _soundOptions = [
-	'Soft Chime',
-	'Rain Drop',
-	'White Noise',
-	'Forest Bell',
-];
-
-const List<String> _sceneryOptions = [
-	'Aurora',
-	'Moonlight',
-	'Lagoon',
-	'Sunrise',
-];
-
-const Map<String, List<Color>> _sceneryGradients = {
-	'Aurora': [Color(0xFF0B3D91), Color(0xFF2E9CCA), Color(0xFF62E8B0)],
-	'Moonlight': [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
-	'Lagoon': [Color(0xFF005C97), Color(0xFF363795), Color(0xFF00BF8F)],
-	'Sunrise': [Color(0xFFFF512F), Color(0xFFDD2476), Color(0xFFFFC371)],
+const Map<String, SceneryConfig> _sceneryConfigs = {
+	'Aurora': SceneryConfig.gradient(
+		colors: [Color(0xFF0B3D91), Color(0xFF2E9CCA), Color(0xFF62E8B0)],
+	),
+	'Moonlight': SceneryConfig.gradient(
+		colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
+	),
+	'Lagoon': SceneryConfig.gradient(
+		colors: [Color(0xFF005C97), Color(0xFF363795), Color(0xFF00BF8F)],
+	),
+	'Sunrise': SceneryConfig.gradient(
+		colors: [Color(0xFFFF512F), Color(0xFFDD2476), Color(0xFFFFC371)],
+	),
+	'Forest Path': SceneryConfig.image(
+		assetPath: 'assets/scenery/forest_1.jpg',
+	),
+	'Evergreen': SceneryConfig.image(
+		assetPath: 'assets/scenery/forest_2.jpg',
+	),
+	'Quiet Library': SceneryConfig.image(
+		assetPath: 'assets/scenery/library_1.jpg',
+	),
+	'Blue Ridge': SceneryConfig.image(
+		assetPath: 'assets/scenery/mountain_1.jpg',
+	),
+	'Alpine Glow': SceneryConfig.image(
+		assetPath: 'assets/scenery/mountain_2.jpg',
+	),
 };
+
+final List<String> _sceneryOptions = _sceneryConfigs.keys.toList(growable: false);
 
 class FocusedTodayCard extends StatelessWidget {
 	final Duration focusedDuration;
@@ -1225,8 +1282,7 @@ class FocusedTodayCard extends StatelessWidget {
 		final displayText = totalMinutes < 60
 				? '${totalMinutes}m'
 				: (focusedDuration.inMinutes / 60).toStringAsFixed(1) + 'h';
-		final progress = (totalMinutes / 240).clamp(0, 1);
-
+    final progress = (totalMinutes % 60) / 60;
 		return Container(
 			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
 			decoration: BoxDecoration(
@@ -1268,18 +1324,18 @@ class FocusedTodayCard extends StatelessWidget {
 								Row(
 									mainAxisAlignment: MainAxisAlignment.spaceBetween,
 									children: [
-										Expanded(
-											child: ClipRRect(
-												borderRadius: BorderRadius.circular(999),
-												child: LinearProgressIndicator(
-													value: progress.toDouble(),
-													minHeight: 6,
-													backgroundColor: scheme.surfaceVariant,
-													color: scheme.primary,
-													year2023: false,
-												),
-											),
-										),
+										// Expanded(
+										// 	child: ClipRRect(
+										// 		borderRadius: BorderRadius.circular(999),
+										// 		child: LinearProgressIndicator(
+										// 			value: progress.toDouble(),
+										// 			minHeight: 6,
+										// 			backgroundColor: scheme.surfaceVariant,
+										// 			color: scheme.primary,
+										// 			year2023: false,
+										// 		),
+										// 	),
+										// ),
 										const SizedBox(width: 12),
 										Text(
 											displayText,
