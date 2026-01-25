@@ -14,6 +14,9 @@ class SettingsState {
     this.defaultPriority = Priority.medium,
     this.notificationsEnabled = true,
     this.focusSessionNotificationsEnabled = false,
+    this.focusFullScreenEnabled = true,
+    this.focusAppPinningEnabled = true,
+    this.focusAllowOverrides = true,
     this.themeMode = ThemeMode.system,
     this.seedColor = 0xFF607D8B, // blueGrey
     this.lastTabIndex = 0,
@@ -24,6 +27,9 @@ class SettingsState {
   final Priority defaultPriority;
   final bool notificationsEnabled;
   final bool focusSessionNotificationsEnabled;
+  final bool focusFullScreenEnabled;
+  final bool focusAppPinningEnabled;
+  final bool focusAllowOverrides;
   final ThemeMode themeMode;
   final int seedColor;
   final int lastTabIndex;
@@ -34,6 +40,9 @@ class SettingsState {
     Priority? defaultPriority,
     bool? notificationsEnabled,
     bool? focusSessionNotificationsEnabled,
+    bool? focusFullScreenEnabled,
+    bool? focusAppPinningEnabled,
+    bool? focusAllowOverrides,
     ThemeMode? themeMode,
     int? seedColor,
     int? lastTabIndex,
@@ -47,6 +56,11 @@ class SettingsState {
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       focusSessionNotificationsEnabled:
           focusSessionNotificationsEnabled ?? this.focusSessionNotificationsEnabled,
+      focusFullScreenEnabled:
+          focusFullScreenEnabled ?? this.focusFullScreenEnabled,
+      focusAppPinningEnabled:
+          focusAppPinningEnabled ?? this.focusAppPinningEnabled,
+      focusAllowOverrides: focusAllowOverrides ?? this.focusAllowOverrides,
       themeMode: themeMode ?? this.themeMode,
       seedColor: seedColor ?? this.seedColor,
       lastTabIndex: lastTabIndex ?? this.lastTabIndex,
@@ -65,6 +79,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final notificationsEnabled = box.get('notificationsEnabled') as bool?;
         final focusSessionNotificationsEnabled =
           box.get('focusSessionNotificationsEnabled') as bool?;
+        final focusFullScreenEnabled =
+          box.get('focusFullScreenEnabled') as bool?;
+        final focusAppPinningEnabled =
+          box.get('focusAppPinningEnabled') as bool?;
+        final focusAllowOverrides = box.get('focusAllowOverrides') as bool?;
       final themeModeIndex = box.get('themeMode') as int?;
       final seed = box.get('seedColor') as int?;
 
@@ -78,6 +97,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         notificationsEnabled: notificationsEnabled ?? state.notificationsEnabled,
         focusSessionNotificationsEnabled:
           focusSessionNotificationsEnabled ?? state.focusSessionNotificationsEnabled,
+        focusFullScreenEnabled:
+          focusFullScreenEnabled ?? state.focusFullScreenEnabled,
+        focusAppPinningEnabled:
+          focusAppPinningEnabled ?? state.focusAppPinningEnabled,
+        focusAllowOverrides: focusAllowOverrides ?? state.focusAllowOverrides,
         themeMode: themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex < ThemeMode.values.length
             ? ThemeMode.values[themeModeIndex]
             : state.themeMode,
@@ -136,6 +160,30 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     SharedPreferences.getInstance().then((prefs) {
       prefs.setBool(FocusSessionPrefs.focusNotificationsEnabledKey, value);
     });
+  }
+
+  void setFocusFullScreenEnabled(bool value) {
+    state = state.copyWith(focusFullScreenEnabled: value);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('focusFullScreenEnabled', value);
+    } catch (_) {}
+  }
+
+  void setFocusAppPinningEnabled(bool value) {
+    state = state.copyWith(focusAppPinningEnabled: value);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('focusAppPinningEnabled', value);
+    } catch (_) {}
+  }
+
+  void setFocusAllowOverrides(bool value) {
+    state = state.copyWith(focusAllowOverrides: value);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('focusAllowOverrides', value);
+    } catch (_) {}
   }
 
   void setThemeMode(ThemeMode mode) {

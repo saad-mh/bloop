@@ -16,9 +16,13 @@ final focusControllerProvider = ChangeNotifierProvider<FocusController>((ref) {
 });
 
 class FocusController extends ChangeNotifier {
-  FocusController({required Ref ref}) {
+  FocusController({required Ref ref}) : _ref = ref {
+    final settings = _ref.read(settingsProvider);
     _focusSessionNotificationsEnabled =
-        ref.read(settingsProvider).focusSessionNotificationsEnabled;
+        settings.focusSessionNotificationsEnabled;
+    _fullScreenEnabled = settings.focusFullScreenEnabled;
+    _appPinningEnabled = settings.focusAppPinningEnabled;
+    _allowOverrides = settings.focusAllowOverrides;
     _notifService.initNotification();
     _focusActionSub = _notifService.focusSessionActions.listen((action) {
       switch (action) {
@@ -34,19 +38,23 @@ class FocusController extends ChangeNotifier {
           return;
       }
     });
-    ref.listen<SettingsState>(settingsProvider, (previous, next) {
+    _ref.listen<SettingsState>(settingsProvider, (previous, next) {
       if (previous?.focusSessionNotificationsEnabled ==
           next.focusSessionNotificationsEnabled) {
-        return;
-      }
-      _focusSessionNotificationsEnabled =
-          next.focusSessionNotificationsEnabled;
-      if (_focusSessionNotificationsEnabled) {
-        _syncFocusSessionNotification();
+        // still allow other focus settings to update below
       } else {
-        _stopFocusNotificationUpdates();
-        _cancelFocusSessionNotification();
+        _focusSessionNotificationsEnabled =
+            next.focusSessionNotificationsEnabled;
+        if (_focusSessionNotificationsEnabled) {
+          _syncFocusSessionNotification();
+        } else {
+          _stopFocusNotificationUpdates();
+          _cancelFocusSessionNotification();
+        }
       }
+      _fullScreenEnabled = next.focusFullScreenEnabled;
+      _appPinningEnabled = next.focusAppPinningEnabled;
+      _allowOverrides = next.focusAllowOverrides;
       _safeNotify();
     });
     _loadPersistedState();
@@ -54,14 +62,13 @@ class FocusController extends ChangeNotifier {
 
   static const int _notificationId = 90001;
   static const String _totalSessionsKey = FocusSessionPrefs.totalSessionsKey;
-  static const String _fullScreenEnabledKey = 'focus.ui.fullScreenEnabled';
   static const String _dimScreenEnabledKey = 'focus.ui.dimScreenEnabled';
-  static const String _appPinningEnabledKey = 'focus.ui.appPinningEnabled';
   static const String _soundsEnabledKey = 'focus.ui.soundsEnabled';
   static const String _sceneryEnabledKey = 'focus.ui.sceneryEnabled';
-  static const String _allowOverridesKey = 'focus.ui.allowOverrides';
   static const String _selectedSoundKey = 'focus.ui.selectedSound';
   static const String _selectedSceneryKey = 'focus.ui.selectedScenery';
+
+  final Ref _ref;
 
   final NotifService _notifService = NotifService();
   Timer? _timer;
@@ -244,12 +251,27 @@ class FocusController extends ChangeNotifier {
     bool? sceneryEnabled,
     bool? allowOverrides,
   }) {
-    _fullScreenEnabled = fullScreenEnabled ?? _fullScreenEnabled;
-    _appPinningEnabled = appPinningEnabled ?? _appPinningEnabled;
+    if (fullScreenEnabled != null) {
+      _fullScreenEnabled = fullScreenEnabled;
+      _ref
+          .read(settingsProvider.notifier)
+          .setFocusFullScreenEnabled(fullScreenEnabled);
+    }
+    if (appPinningEnabled != null) {
+      _appPinningEnabled = appPinningEnabled;
+      _ref
+          .read(settingsProvider.notifier)
+          .setFocusAppPinningEnabled(appPinningEnabled);
+    }
     _dimScreenEnabled = dimScreenEnabled ?? _dimScreenEnabled;
     _soundsEnabled = soundsEnabled ?? _soundsEnabled;
     _sceneryEnabled = sceneryEnabled ?? _sceneryEnabled;
-    _allowOverrides = allowOverrides ?? _allowOverrides;
+    if (allowOverrides != null) {
+      _allowOverrides = allowOverrides;
+      _ref
+          .read(settingsProvider.notifier)
+          .setFocusAllowOverrides(allowOverrides);
+    }
     _persistUiPrefs();
     _safeNotify();
   }
@@ -468,12 +490,9 @@ class FocusController extends ChangeNotifier {
   Future<void> _persistUiPrefs() async {
     try {
       final box = Hive.box(StorageService.settingsBoxName);
-      await box.put(_fullScreenEnabledKey, _fullScreenEnabled);
       await box.put(_dimScreenEnabledKey, _dimScreenEnabled);
-      await box.put(_appPinningEnabledKey, _appPinningEnabled);
       await box.put(_soundsEnabledKey, _soundsEnabled);
       await box.put(_sceneryEnabledKey, _sceneryEnabled);
-      await box.put(_allowOverridesKey, _allowOverrides);
       await box.put(_selectedSoundKey, _selectedSound);
       await box.put(_selectedSceneryKey, _selectedScenery);
     } catch (_) {
@@ -491,12 +510,9 @@ class FocusController extends ChangeNotifier {
       final storedTotal = box.get(_totalSessionsKey) as int?;
       final storedRunning = box.get(FocusSessionPrefs.isRunningKey) as bool?;
       final storedActive = box.get(FocusSessionPrefs.isActiveKey) as bool?;
-      final storedFullScreen = box.get(_fullScreenEnabledKey) as bool?;
       final storedDim = box.get(_dimScreenEnabledKey) as bool?;
-      final storedPinning = box.get(_appPinningEnabledKey) as bool?;
       final storedSounds = box.get(_soundsEnabledKey) as bool?;
       final storedScenery = box.get(_sceneryEnabledKey) as bool?;
-      final storedOverrides = box.get(_allowOverridesKey) as bool?;
       final storedSoundChoice = box.get(_selectedSoundKey) as String?;
       final storedSceneryChoice = box.get(_selectedSceneryKey) as String?;
 
@@ -517,12 +533,9 @@ class FocusController extends ChangeNotifier {
       _totalSessions = storedTotal ?? _totalSessions;
       _isRunning = storedRunning ?? false;
       _isSessionActive = storedActive ?? _isRunning;
-      _fullScreenEnabled = storedFullScreen ?? _fullScreenEnabled;
       _dimScreenEnabled = storedDim ?? _dimScreenEnabled;
-      _appPinningEnabled = storedPinning ?? _appPinningEnabled;
       _soundsEnabled = storedSounds ?? _soundsEnabled;
       _sceneryEnabled = storedScenery ?? _sceneryEnabled;
-      _allowOverrides = storedOverrides ?? _allowOverrides;
       _selectedSound = storedSoundChoice ?? _selectedSound;
       _selectedScenery = storedSceneryChoice ?? _selectedScenery;
     } catch (_) {

@@ -203,6 +203,47 @@ class SettingsScreen extends ConsumerWidget {
                   padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
                   child: Align(
                     alignment: Alignment.centerLeft,
+                    child: Text('Focus session'),
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('Full-screen focus mode'),
+                  subtitle: const Text('Hide system UI during focus sessions'),
+                  value: settings.focusFullScreenEnabled,
+                  onChanged: controller.setFocusFullScreenEnabled,
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('App pinning'),
+                  subtitle: const Text('Keep Bloop pinned while focusing'),
+                  value: settings.focusAppPinningEnabled,
+                  onChanged: controller.setFocusAppPinningEnabled,
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('Allow overrides during focus'),
+                  subtitle: const Text('Let the focus session sheet adjust these settings'),
+                  value: settings.focusAllowOverrides,
+                  onChanged: controller.setFocusAllowOverrides,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
                     child: Text('General'),
                   ),
                 ),

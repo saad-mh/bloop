@@ -249,7 +249,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 											duration: const Duration(milliseconds: 220),
 											curve: Curves.easeOut,
 											child: Text(
-												'Tap to show controls',
+												'Tap to show controls • Swipe right for settings',
 												style: textTheme.bodySmall?.copyWith(
 													color: scheme.onSurfaceVariant,
 												),
@@ -640,12 +640,9 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 		FocusController controller,
 	) async {
 		_controlsTimer?.cancel();
-		var fullScreen = controller.fullScreenEnabled;
-		var appPinning = controller.appPinningEnabled;
 		var dimScreen = controller.dimScreenEnabled;
 		var soundsEnabled = controller.soundsEnabled;
 		var sceneryEnabled = controller.sceneryEnabled;
-		var allowOverrides = controller.allowOverrides;
 		await showModalBottomSheet<void>(
 			context: context,
 			showDragHandle: true,
@@ -666,18 +663,6 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 									const SizedBox(height: 12),
 									SwitchListTile(
 										contentPadding: EdgeInsets.zero,
-										value: fullScreen,
-										title: const Text('Full-screen focus mode'),
-										onChanged: (v) => setModalState(() => fullScreen = v),
-									),
-									SwitchListTile(
-										contentPadding: EdgeInsets.zero,
-										value: appPinning,
-										title: const Text('App pinning'),
-										onChanged: (v) => setModalState(() => appPinning = v),
-									),
-									SwitchListTile(
-										contentPadding: EdgeInsets.zero,
 										value: dimScreen,
 										title: const Text('Dim screen during focus'),
 										onChanged: (v) => setModalState(() => dimScreen = v),
@@ -693,12 +678,6 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 										value: sceneryEnabled,
 										title: const Text('Scenery on'),
 										onChanged: (v) => setModalState(() => sceneryEnabled = v),
-									),
-									SwitchListTile(
-										contentPadding: EdgeInsets.zero,
-										value: allowOverrides,
-										title: const Text('Allow overrides during focus'),
-										onChanged: (v) => setModalState(() => allowOverrides = v),
 									),
 									const SizedBox(height: 12),
 									Row(
@@ -726,12 +705,9 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 			},
 		);
 		controller.updateSessionPreferences(
-			fullScreenEnabled: fullScreen,
-			appPinningEnabled: appPinning,
 			dimScreenEnabled: dimScreen,
 			soundsEnabled: soundsEnabled,
 			sceneryEnabled: sceneryEnabled,
-			allowOverrides: allowOverrides,
 		);
 		_armAutoHide();
 	}

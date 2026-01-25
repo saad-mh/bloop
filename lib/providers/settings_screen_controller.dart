@@ -35,6 +35,18 @@ class SettingsScreenController {
     _ref.read(settingsProvider.notifier).setFocusSessionNotificationsEnabled(value);
   }
 
+  void setFocusFullScreenEnabled(bool value) {
+    _ref.read(settingsProvider.notifier).setFocusFullScreenEnabled(value);
+  }
+
+  void setFocusAppPinningEnabled(bool value) {
+    _ref.read(settingsProvider.notifier).setFocusAppPinningEnabled(value);
+  }
+
+  void setFocusAllowOverrides(bool value) {
+    _ref.read(settingsProvider.notifier).setFocusAllowOverrides(value);
+  }
+
   void resetDefaults() {
     _ref.read(settingsProvider.notifier).resetDefaults();
   }
