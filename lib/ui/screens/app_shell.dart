@@ -11,7 +11,8 @@ import '../../providers/settings_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-import 'package:flutter/cupertino.dart';
+
+import 'focus_controller.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -177,47 +178,56 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   Widget build(BuildContext context) {
     ref.watch(settingsProvider);
+    final focusController = ref.watch(focusControllerProvider);
+    final isFullScreen = focusController.isFullScreenActive;
     return Scaffold(
       extendBody: true,
-      body: SafeArea(
-        child: IndexedStack(
-          index: _index,
-          children: _pages,
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-          child: GNav(
-            haptic: true,
-            gap: 6,
-            // rippleColor: settings.themeMode == ThemeMode.dark
-            //     ? Colors.grey.shade800
-            //     : Colors.grey.shade300,
-            iconSize: 24,
-            textSize: 12,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-            tabMargin: const EdgeInsets.symmetric(horizontal: 4),
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            selectedIndex: _index,
-            onTabChange: (i) {
-              setState(() => _index = i);
-              ref.read(settingsProvider.notifier).setLastTabIndex(i);
-            },
-            tabBackgroundColor: Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withOpacity(0.1),
-            tabs: const [
-              GButton(icon: Icons.task_alt, text: 'Tasks'),
-              GButton(icon: Icons.done_all, text: 'Completed'),
-              GButton(icon: Icons.workspaces, text: 'Focus'),
-              GButton(icon: Icons.settings_suggest, text: 'Preferences'),
-            ],
-          ),
-        ),
-      ),
+      body: isFullScreen
+          ? IndexedStack(
+              index: _index,
+              children: _pages,
+            )
+          : SafeArea(
+              child: IndexedStack(
+                index: _index,
+                children: _pages,
+              ),
+            ),
+      bottomNavigationBar: isFullScreen
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: GNav(
+                  haptic: true,
+                  gap: 6,
+                  // rippleColor: settings.themeMode == ThemeMode.dark
+                  //     ? Colors.grey.shade800
+                  //     : Colors.grey.shade300,
+                  iconSize: 24,
+                  textSize: 12,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+                  tabMargin: const EdgeInsets.symmetric(horizontal: 4),
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  selectedIndex: _index,
+                  onTabChange: (i) {
+                    setState(() => _index = i);
+                    ref.read(settingsProvider.notifier).setLastTabIndex(i);
+                  },
+                  tabBackgroundColor: Theme.of(context)
+                      .colorScheme
+                      .primaryContainer
+                      .withOpacity(0.1),
+                  tabs: const [
+                    GButton(icon: Icons.task_alt, text: 'Tasks'),
+                    GButton(icon: Icons.done_all, text: 'Completed'),
+                    GButton(icon: Icons.workspaces, text: 'Focus'),
+                    GButton(icon: Icons.settings_suggest, text: 'Preferences'),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 }
