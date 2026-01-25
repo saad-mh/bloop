@@ -1282,7 +1282,7 @@ class FocusedTodayCard extends StatelessWidget {
 		final displayText = totalMinutes < 60
 				? '${totalMinutes}m'
 				: (focusedDuration.inMinutes / 60).toStringAsFixed(1) + 'h';
-
+    final progress = (totalMinutes % 60) / 60;
 		return Container(
 			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
 			decoration: BoxDecoration(
@@ -1324,18 +1324,18 @@ class FocusedTodayCard extends StatelessWidget {
 								Row(
 									mainAxisAlignment: MainAxisAlignment.spaceBetween,
 									children: [
-										Expanded(
-											child: ClipRRect(
-												borderRadius: BorderRadius.circular(999),
-												child: LinearProgressIndicator(
-													value: progress.toDouble(),
-													minHeight: 6,
-													backgroundColor: scheme.surfaceVariant,
-													color: scheme.primary,
-													year2023: false,
-												),
-											),
-										),
+										// Expanded(
+										// 	child: ClipRRect(
+										// 		borderRadius: BorderRadius.circular(999),
+										// 		child: LinearProgressIndicator(
+										// 			value: progress.toDouble(),
+										// 			minHeight: 6,
+										// 			backgroundColor: scheme.surfaceVariant,
+										// 			color: scheme.primary,
+										// 			year2023: false,
+										// 		),
+										// 	),
+										// ),
 										const SizedBox(width: 12),
 										Text(
 											displayText,
