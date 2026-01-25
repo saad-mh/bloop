@@ -3,8 +3,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:slide_to_act/slide_to_act.dart';
 
 import 'focus_controller.dart';
 
@@ -18,7 +18,7 @@ class PomodoroCard extends ConsumerStatefulWidget {
 class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 	Timer? _controlsTimer;
 	bool _controlsVisible = false;
-	bool _confirmSkip = false;
+	bool _isInteracting = false;
 	ProviderSubscription<FocusController>? _focusSub;
 
 	static const Duration _autoHideDuration = Duration(seconds: 4);
@@ -32,7 +32,6 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 				if (mounted) {
 					setState(() {
 						_controlsVisible = false;
-						_confirmSkip = false;
 					});
 				}
 			}
@@ -49,9 +48,6 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 	void _toggleControls() {
 		setState(() {
 			_controlsVisible = !_controlsVisible;
-			if (!_controlsVisible) {
-				_confirmSkip = false;
-			}
 		});
 		_armAutoHide();
 	}
@@ -65,15 +61,29 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 
 	void _armAutoHide() {
 		_controlsTimer?.cancel();
-		if (_controlsVisible) {
+		if (_controlsVisible && !_isInteracting) {
 			_controlsTimer = Timer(_autoHideDuration, () {
 				if (!mounted) return;
 				setState(() {
 					_controlsVisible = false;
-					_confirmSkip = false;
 				});
 			});
 		}
+	}
+
+	void _startInteraction() {
+		if (!_controlsVisible) return;
+		_controlsTimer?.cancel();
+		if (!_isInteracting) {
+			setState(() => _isInteracting = true);
+		}
+	}
+
+	void _endInteraction() {
+		if (_isInteracting) {
+			setState(() => _isInteracting = false);
+		}
+		_armAutoHide();
 	}
 
 	@override
@@ -249,7 +259,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 											duration: const Duration(milliseconds: 220),
 											curve: Curves.easeOut,
 											child: Text(
-												'Tap to show controls • Swipe right for settings',
+												'Tap to show controls • Swipe left for settings',
 												style: textTheme.bodySmall?.copyWith(
 													color: scheme.onSurfaceVariant,
 												),
@@ -321,22 +331,46 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 										isRunning: controller.isRunning,
 										selectedSound: controller.selectedSound,
 										selectedScenery: controller.selectedScenery,
+										controlsVisible: _controlsVisible,
+										onInteractionStart: _startInteraction,
+										onInteractionEnd: _endInteraction,
 										onPauseResume: () {
+											_startInteraction();
 											_showControls();
 											controller.isRunning
 												? controller.pause()
 												: controller.start();
+											_endInteraction();
 										},
 										onSlideEnd: () {
+											_startInteraction();
 											_showControls();
-											controller.reset();
+											_confirmActionSheet(
+												context,
+												title: 'End this focus session?',
+												description:
+													'Your current focus session will be stopped.',
+												confirmLabel: 'End session',
+											).then((shouldEnd) {
+												if (shouldEnd) {
+													controller.reset();
+												}
+												_endInteraction();
+											});
 										},
-										showConfirmSkip: _confirmSkip,
-										onSkipArmed: () => setState(() => _confirmSkip = true),
-										onSkipCancel: () => setState(() => _confirmSkip = false),
-										onSkipConfirm: () {
-											setState(() => _confirmSkip = false);
-											controller.nextSession();
+										onSkipRequested: () async {
+											_startInteraction();
+											final shouldSkip = await _confirmActionSheet(
+												context,
+												title: 'Skip this session?',
+												description:
+													'You will move to the next session immediately.',
+												confirmLabel: 'Skip session',
+											);
+											if (shouldSkip) {
+												controller.nextSession();
+											}
+											_endInteraction();
 										},
 										onInteract: _showControls,
 									),
@@ -347,6 +381,77 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 				],
 			),
 		);
+	}
+
+	Future<bool> _confirmActionSheet(
+		BuildContext context, {
+		required String title,
+		required String description,
+		required String confirmLabel,
+	}) async {
+		final scheme = Theme.of(context).colorScheme;
+		final textTheme = Theme.of(context).textTheme;
+		final result = await showModalBottomSheet<bool>(
+			context: context,
+			isScrollControlled: true,
+			showDragHandle: true,
+			backgroundColor: scheme.surface,
+			shape: const RoundedRectangleBorder(
+				borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+			),
+			builder: (context) {
+				return SafeArea(
+					child: SizedBox(
+						height: 220,
+						child: Padding(
+							padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+							child: Column(
+								mainAxisAlignment: MainAxisAlignment.center,
+								crossAxisAlignment: CrossAxisAlignment.start,
+								children: [
+									Text(
+										title,
+										style: textTheme.titleLarge?.copyWith(
+											fontWeight: FontWeight.w600,
+										),
+									),
+									const SizedBox(height: 8),
+									Text(
+										description,
+										style: textTheme.bodyMedium?.copyWith(
+											color: scheme.onSurfaceVariant,
+										),
+									),
+									const SizedBox(height: 20),
+									Row(
+										children: [
+											Expanded(
+												child: OutlinedButton(
+													onPressed: () => Navigator.pop(context, false),
+													child: const Text('Cancel'),
+												),
+											),
+											const SizedBox(width: 12),
+											Expanded(
+												child: FilledButton(
+													onPressed: () => Navigator.pop(context, true),
+													style: FilledButton.styleFrom(
+														backgroundColor: scheme.error,
+														foregroundColor: scheme.onError,
+													),
+													child: Text(confirmLabel),
+												),
+											),
+										],
+									),
+								],
+							),
+						),
+					),
+				);
+			},
+		);
+		return result ?? false;
 	}
 
 	Future<void> _openSettings(BuildContext context, WidgetRef ref) async {
@@ -802,333 +907,202 @@ class _FocusControlsPanel extends StatelessWidget {
 		required this.isRunning,
 		required this.selectedSound,
 		required this.selectedScenery,
+		required this.controlsVisible,
+		required this.onInteractionStart,
+		required this.onInteractionEnd,
 		required this.onPauseResume,
 		required this.onSlideEnd,
-		required this.onSkipArmed,
-		required this.onSkipCancel,
-		required this.onSkipConfirm,
-		required this.showConfirmSkip,
+		required this.onSkipRequested,
 		required this.onInteract,
 	});
 
 	final bool isRunning;
 	final String selectedSound;
 	final String selectedScenery;
+	final bool controlsVisible;
+	final VoidCallback onInteractionStart;
+	final VoidCallback onInteractionEnd;
 	final VoidCallback onPauseResume;
 	final VoidCallback onSlideEnd;
-	final VoidCallback onSkipArmed;
-	final VoidCallback onSkipCancel;
-	final VoidCallback onSkipConfirm;
-	final bool showConfirmSkip;
+	final VoidCallback onSkipRequested;
 	final VoidCallback onInteract;
 
 	@override
 	Widget build(BuildContext context) {
 		final scheme = Theme.of(context).colorScheme;
 		final textTheme = Theme.of(context).textTheme;
-		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-			decoration: BoxDecoration(
-				color: scheme.surface.withOpacity(0.9),
-				borderRadius: BorderRadius.circular(24),
-				boxShadow: [
-					BoxShadow(
-						color: scheme.shadow.withOpacity(0.2),
-						blurRadius: 24,
-						offset: const Offset(0, 12),
-					),
-				],
-			),
-			child: Column(
-				mainAxisSize: MainAxisSize.min,
-				children: [
-					Row(
-						children: [
-							Expanded(
-								child: FilledButton(
-									onPressed: onPauseResume,
-									child: Text(isRunning ? 'Pause' : 'Resume'),
+		return Listener(
+			onPointerDown: (_) => onInteractionStart(),
+			onPointerUp: (_) => onInteractionEnd(),
+			onPointerCancel: (_) => onInteractionEnd(),
+			child: Container(
+				padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+				decoration: BoxDecoration(
+					color: scheme.surface.withOpacity(0.9),
+					borderRadius: BorderRadius.circular(24),
+					boxShadow: [
+						BoxShadow(
+							color: scheme.shadow.withOpacity(0.2),
+							blurRadius: 24,
+							offset: const Offset(0, 12),
+						),
+					],
+				),
+				child: Column(
+					mainAxisSize: MainAxisSize.min,
+					children: [
+						Center(
+							child: FilledButton(
+								onPressed: onPauseResume,
+								style: FilledButton.styleFrom(
+									minimumSize: const Size(180, 48),
 								),
+								child: Text(isRunning ? 'Pause' : 'Resume'),
 							),
-							const SizedBox(width: 12),
-							Expanded(
-								child: SlideToEndControl(
-									label: 'Slide to end focus',
-									onCompleted: onSlideEnd,
-									onInteract: onInteract,
-								),
+						),
+						const SizedBox(height: 14),
+						SizedBox(
+							width: double.infinity,
+							child: SlideToEndControl(
+								label: 'Slide to End Focus Session',
+								onCompleted: onSlideEnd,
+								onInteract: onInteract,
+								// destructive: true,
 							),
-						],
-					),
-					const SizedBox(height: 12),
-					LongSwipeSkipControl(
-						label: showConfirmSkip
-							? 'Release confirmed - tap to skip'
-							: 'Long swipe to skip session',
-						showConfirm: showConfirmSkip,
-						onArmed: onSkipArmed,
-						onCancel: onSkipCancel,
-						onConfirm: onSkipConfirm,
-						onInteract: onInteract,
-					),
-					const SizedBox(height: 10),
-					Row(
-						children: [
-							Icon(Icons.music_note_rounded, size: 16, color: scheme.primary),
-							const SizedBox(width: 6),
-							Expanded(
-								child: Text(
-									'${selectedSound} • ${selectedScenery}',
-									style: textTheme.bodySmall?.copyWith(
-										color: scheme.onSurfaceVariant,
+						),
+						const SizedBox(height: 12),
+						AnimatedOpacity(
+							opacity: controlsVisible ? 1 : 0,
+							duration: const Duration(milliseconds: 160),
+							curve: Curves.easeOut,
+							child: Column(
+								children: [
+									LongSwipeSkipControl(
+										label: 'Long swipe to skip session',
+										onArmed: onSkipRequested,
+										onInteract: onInteract,
+									mutedStyle: true,
+									),
+								const SizedBox(height: 10),
+								AnimatedOpacity(
+									opacity: controlsVisible ? 1 : 0,
+									duration: const Duration(milliseconds: 120),
+									curve: Curves.easeOut,
+									child: Row(
+									  mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+										children: [
+											// Icon(
+											// 	Icons.music_note_rounded,
+											// 	size: 16,
+											// 	color: scheme.onSurfaceVariant,
+											// ),
+											const SizedBox(width: 6),
+											Expanded(
+												child: Text(
+													'🎧 ${selectedSound} • 🌄 ${selectedScenery}',
+													style: textTheme.bodySmall?.copyWith(
+														color: scheme.onSurfaceVariant,
+													),
+												  softWrap: true,
+												  textAlign: .center,
+												),
+											),
+										],
 									),
 								),
-							),
-						],
+							],
+						),
 					),
 				],
 			),
+		),
 		);
 	}
 }
 
-class SlideToEndControl extends StatefulWidget {
+class SlideToEndControl extends StatelessWidget {
 	const SlideToEndControl({
 		required this.label,
 		required this.onCompleted,
 		required this.onInteract,
+		this.destructive = false,
 		super.key,
 	});
 
 	final String label;
 	final VoidCallback onCompleted;
 	final VoidCallback onInteract;
-
-	@override
-	State<SlideToEndControl> createState() => _SlideToEndControlState();
-}
-
-class _SlideToEndControlState extends State<SlideToEndControl> {
-	double _progress = 0;
-
-	void _updateProgress(Offset localPosition, double width) {
-		final thumbSize = 36.0;
-		final max = (width - thumbSize).clamp(1, width);
-		final next = (localPosition.dx - thumbSize / 2).clamp(0, max) / max;
-		setState(() => _progress = next);
-		widget.onInteract();
-	}
-
-	void _reset() {
-		setState(() => _progress = 0);
-	}
+	final bool destructive;
 
 	@override
 	Widget build(BuildContext context) {
 		final scheme = Theme.of(context).colorScheme;
-		return LayoutBuilder(
-			builder: (context, constraints) {
-				final width = constraints.maxWidth;
-				return GestureDetector(
-					onHorizontalDragUpdate: (details) =>
-						_updateProgress(details.localPosition, width),
-					onHorizontalDragEnd: (_) {
-						if (_progress >= 0.98) {
-							HapticFeedback.mediumImpact();
-							widget.onCompleted();
-						}
-						_reset();
-					},
-					child: Container(
-						height: 48,
-						decoration: BoxDecoration(
-							color: scheme.surfaceVariant,
-							borderRadius: BorderRadius.circular(999),
-						),
-						child: Stack(
-							alignment: Alignment.centerLeft,
-							children: [
-								AnimatedContainer(
-									duration: const Duration(milliseconds: 150),
-									width: (width * _progress).clamp(36, width),
-									height: 48,
-									decoration: BoxDecoration(
-										color: scheme.primaryContainer,
-										borderRadius: BorderRadius.circular(999),
-									),
-								),
-								Center(
-									child: Text(
-										widget.label,
-										style: Theme.of(context).textTheme.labelLarge?.copyWith(
-											color: scheme.onSurface,
-										),
-									),
-								),
-								Positioned(
-									left: (width - 36) * _progress,
-									child: Container(
-										width: 36,
-										height: 36,
-										margin: const EdgeInsets.all(6),
-										decoration: BoxDecoration(
-											color: scheme.primary,
-											shape: BoxShape.circle,
-										),
-										child: Icon(
-											Icons.chevron_right_rounded,
-											color: scheme.onPrimary,
-										),
-									),
-								),
-							],
-						),
-					),
-				);
+		return SlideAction(
+			onSubmit: () async {
+				onInteract();
+				onCompleted();
 			},
+			height: 48,
+			text: label,
+			textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+				color: scheme.onSurfaceVariant,
+				fontWeight: FontWeight.w600,
+			),
+			outerColor: scheme.surfaceVariant,
+			innerColor: scheme.surface,
+			elevation: 0,
+			borderRadius: 999,
+			sliderButtonIconPadding: 1,
+			sliderButtonIcon: Icon(
+				Icons.chevron_right_rounded,
+				color: scheme.onSurface,
+				size: 32,
+			),
+			sliderRotate: false,
 		);
 	}
 }
 
-class LongSwipeSkipControl extends StatefulWidget {
+class LongSwipeSkipControl extends StatelessWidget {
 	const LongSwipeSkipControl({
 		required this.label,
-		required this.showConfirm,
 		required this.onArmed,
-		required this.onCancel,
-		required this.onConfirm,
 		required this.onInteract,
+		this.mutedStyle = false,
 		super.key,
 	});
 
 	final String label;
-	final bool showConfirm;
 	final VoidCallback onArmed;
-	final VoidCallback onCancel;
-	final VoidCallback onConfirm;
 	final VoidCallback onInteract;
-
-	@override
-	State<LongSwipeSkipControl> createState() => _LongSwipeSkipControlState();
-}
-
-class _LongSwipeSkipControlState extends State<LongSwipeSkipControl> {
-	double _progress = 0;
-	bool _armed = false;
-
-	void _updateProgress(Offset localPosition, double width) {
-		final thumbSize = 30.0;
-		final max = (width - thumbSize).clamp(1, width);
-		final next = (localPosition.dx - thumbSize / 2).clamp(0, max) / max;
-		setState(() => _progress = next);
-		if (next >= 0.9 && !_armed) {
-			_armed = true;
-			HapticFeedback.mediumImpact();
-			widget.onArmed();
-		}
-		widget.onInteract();
-	}
-
-	void _reset() {
-		setState(() {
-			_progress = 0;
-			_armed = false;
-		});
-	}
+	final bool mutedStyle;
 
 	@override
 	Widget build(BuildContext context) {
 		final scheme = Theme.of(context).colorScheme;
-		return LayoutBuilder(
-			builder: (context, constraints) {
-				final width = constraints.maxWidth;
-				if (widget.showConfirm) {
-					return Container(
-						padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-						decoration: BoxDecoration(
-							color: scheme.errorContainer.withOpacity(0.9),
-							borderRadius: BorderRadius.circular(16),
-						),
-						child: Row(
-							children: [
-								Expanded(
-									child: Text(
-										'Confirm skip?',
-										style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-											color: scheme.onErrorContainer,
-											fontWeight: FontWeight.w600,
-										),
-									),
-								),
-								TextButton(
-									onPressed: () {
-									widget.onCancel();
-								},
-									child: const Text('Cancel'),
-								),
-								const SizedBox(width: 8),
-								FilledButton(
-									onPressed: () {
-									widget.onConfirm();
-								},
-									style: FilledButton.styleFrom(
-										backgroundColor: scheme.error,
-									),
-									child: const Text('Skip'),
-								),
-							],
-						),
-					);
-				}
-
-				return GestureDetector(
-					onHorizontalDragUpdate: (details) =>
-						_updateProgress(details.localPosition, width),
-					onHorizontalDragEnd: (_) {
-						if (_progress >= 0.9) {
-							widget.onArmed();
-						}
-						_reset();
-					},
-					child: Container(
-						height: 44,
-						decoration: BoxDecoration(
-							color: scheme.surfaceVariant,
-							borderRadius: BorderRadius.circular(999),
-						),
-						child: Stack(
-							alignment: Alignment.center,
-							children: [
-								Center(
-									child: Text(
-										widget.label,
-										style: Theme.of(context).textTheme.labelLarge?.copyWith(
-											color: scheme.onSurface,
-										),
-									),
-								),
-								Positioned(
-									left: (width - 30) * _progress,
-									child: Container(
-										width: 30,
-										height: 30,
-										margin: const EdgeInsets.all(7),
-										decoration: BoxDecoration(
-											color: scheme.error,
-											shape: BoxShape.circle,
-										),
-										child: Icon(
-											Icons.fast_forward_rounded,
-											color: scheme.onError,
-											size: 18,
-										),
-									),
-								),
-							],
-						),
-					),
-				);
+		return SlideAction(
+			onSubmit: () async {
+				onInteract();
+				onArmed();
 			},
+			height: 48,
+			text: label,
+			textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+				color: scheme.onSurfaceVariant,
+				fontWeight: FontWeight.w600,
+			),
+			outerColor: scheme.surfaceVariant,
+			innerColor: scheme.surface,
+			elevation: 0,
+			borderRadius: 999,
+			sliderButtonIconPadding: 1,
+			sliderButtonIcon: Icon(
+				Icons.fast_forward_rounded,
+				color: scheme.onSurface,
+				size: 32,
+			),
+			sliderRotate: false,
 		);
 	}
 }
