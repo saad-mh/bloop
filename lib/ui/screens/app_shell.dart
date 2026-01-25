@@ -11,6 +11,7 @@ import '../../providers/settings_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:flutter/cupertino.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -103,8 +104,36 @@ class _AppShellState extends ConsumerState<AppShell>
       return;
     }
 
-    _waitingForReturn = true;
     final step = _permissionSteps[_permissionStepIndex];
+    final dialogCopy = _dialogCopyForStep(step);
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(dialogCopy.title),
+        content: Text(dialogCopy.message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Not now'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(dialogCopy.confirmLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (shouldOpen != true) {
+      _waitingForReturn = false;
+      await _advancePermissionFlow();
+      return;
+    }
+
+    _waitingForReturn = true;
     switch (step) {
       case _PermissionStep.notifications:
         await NotificationService.instance.openNotificationSettings();
@@ -125,6 +154,25 @@ class _AppShellState extends ConsumerState<AppShell>
     final box = Hive.box(StorageService.settingsBoxName);
     await box.put(_permissionsOnboardingKey, true);
     _permissionFlowStarted = false;
+  }
+
+  _PermissionDialogCopy _dialogCopyForStep(_PermissionStep step) {
+    switch (step) {
+      case _PermissionStep.notifications:
+        return const _PermissionDialogCopy(
+          title: 'Enable notifications',
+          message:
+              'Bloop needs notification access so reminders can alert you on time. We will open system settings to turn it on.',
+          confirmLabel: 'Open settings',
+        );
+      case _PermissionStep.exactAlarm:
+        return const _PermissionDialogCopy(
+          title: 'Allow exact alarms',
+          message:
+              'Exact alarms let Bloop deliver reminders at the precise time. We will open system settings to enable it.',
+          confirmLabel: 'Open settings',
+        );
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -177,4 +225,16 @@ class _AppShellState extends ConsumerState<AppShell>
 enum _PermissionStep {
   notifications,
   exactAlarm,
+}
+
+class _PermissionDialogCopy {
+  const _PermissionDialogCopy({
+    required this.title,
+    required this.message,
+    required this.confirmLabel,
+  });
+
+  final String title;
+  final String message;
+  final String confirmLabel;
 }

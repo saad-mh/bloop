@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/task.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
+import '../../services/notification_service.dart';
+import 'package:flutter/cupertino.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -245,6 +249,19 @@ class SettingsScreen extends ConsumerWidget {
                         );
                       }
                     }
+                  },
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                ListTile(
+                  title: const Text('Required permissions'),
+                  subtitle: const Text('Review and grant app permissions'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PermissionSettingsScreen(),
+                      ),
+                    );
                   },
                 ),
                 Divider(height: 1, indent: 15, endIndent: 15),
@@ -546,6 +563,161 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class PermissionSettingsScreen extends StatefulWidget {
+  const PermissionSettingsScreen({super.key});
+
+  @override
+  State<PermissionSettingsScreen> createState() =>
+      _PermissionSettingsScreenState();
+}
+
+class _PermissionSettingsScreenState extends State<PermissionSettingsScreen>
+    with WidgetsBindingObserver {
+  bool? _notificationsGranted;
+  bool? _exactAlarmGranted;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadPermissionStatus();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadPermissionStatus();
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  Future<void> _loadPermissionStatus() async {
+    if (!mounted) return;
+    setState(() {
+      _loading = true;
+    });
+
+    if (!Platform.isAndroid) {
+      setState(() {
+        _notificationsGranted = true;
+        _exactAlarmGranted = true;
+        _loading = false;
+      });
+      return;
+    }
+
+    final notif =
+        await NotificationService.instance.hasNotificationPermission();
+    final exact =
+        await NotificationService.instance.checkExactAlarmAllowed();
+
+    if (!mounted) return;
+    setState(() {
+      _notificationsGranted = notif == true;
+      _exactAlarmGranted = exact == true;
+      _loading = false;
+    });
+  }
+
+  Widget _statusIcon(bool? granted) {
+    if (_loading || granted == null) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2, semanticsLabel: 'Loading', year2023: false,),
+      );
+    }
+    return Icon(
+      granted ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.exclamationmark_triangle,
+      color: granted ? Colors.green : Colors.orange,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Required permissions'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('Notifications'),
+                  subtitle: const Text('Allow reminders to alert you'),
+                  trailing: _statusIcon(_notificationsGranted),
+                ),
+                if (Platform.isAndroid && _notificationsGranted == false)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await NotificationService.instance
+                              .openNotificationSettings();
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open settings'),
+                      ),
+                    ),
+                  ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                ListTile(
+                  title: const Text('Exact alarms'),
+                  subtitle: const Text('Deliver reminders at the exact time'),
+                  trailing: _statusIcon(_exactAlarmGranted),
+                ),
+                if (Platform.isAndroid && _exactAlarmGranted == false)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await NotificationService.instance
+                              .requestExactAlarmPermission();
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open settings'),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (!Platform.isAndroid)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'Permissions are managed by the system on this platform.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+            ),
         ],
       ),
     );

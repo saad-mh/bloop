@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/task.dart';
+import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
 import 'task_editor_screen.dart';
@@ -16,7 +17,8 @@ class CompletedScreen extends ConsumerStatefulWidget {
 
 class _CompletedScreenState extends ConsumerState<CompletedScreen> {
   late final ConfettiController _confettiController;
-  DateTime? _lastCelebratedDay;
+  bool _isActive = false;
+  bool _playedForActiveSession = false;
 
   @override
   void initState() {
@@ -32,14 +34,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
     super.dispose();
   }
 
-  void _maybeCelebrate({
-    required DateTime today,
-    required bool allComplete,
-  }) {
-    if (!allComplete) return;
-    final dayKey = DateTime(today.year, today.month, today.day);
-    if (_lastCelebratedDay == dayKey) return;
-    _lastCelebratedDay = dayKey;
+  void _playConfetti() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _confettiController.play();
@@ -66,7 +61,19 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
     final allTodayComplete =
         todayTasks.isNotEmpty && completedToday == todayTasks.length;
     final showTodaySummary = todayTasks.isNotEmpty && completedToday > 0;
-    _maybeCelebrate(today: today, allComplete: allTodayComplete);
+    final settings = ref.watch(settingsProvider);
+    final isActive = settings.lastTabIndex == 1;
+    final textToShow = allTasks.isEmpty ? "You dont even have any tasks" : "No tasks completed yet";
+    if (isActive != _isActive) {
+      _isActive = isActive;
+      if (_isActive) {
+        _playedForActiveSession = false;
+      }
+    }
+    if (_isActive && allTodayComplete && !_playedForActiveSession) {
+      _playedForActiveSession = true;
+      _playConfetti();
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Completed'),
@@ -119,7 +126,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
           tasksAsync.when(
             data: (tasks) {
               if (tasks.isEmpty) {
-                return const Center(child: Text('Nothing completed yet'));
+                return Center(child: Text(textToShow));
               }
               return ListView.builder(
                 itemCount: tasks.length + (showTodaySummary ? 1 : 0),
@@ -145,7 +152,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
                             const SizedBox(height: 6),
                             Text(
                               allTodayComplete
-                                  ? "On completing all of today's tasks"
+                                  ? "on completing all of today's tasks"
                                   : '$completedToday of ${todayTasks.length} tasks completed',
                             ),
                             const SizedBox(height: 10),
