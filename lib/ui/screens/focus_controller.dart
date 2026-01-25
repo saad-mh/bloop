@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:just_audio/just_audio.dart';
 
 import '../../providers/settings_provider.dart';
 import '../../services/focus_foreground_task.dart';
@@ -14,6 +15,16 @@ import '../../services/storage_service.dart';
 final focusControllerProvider = ChangeNotifierProvider<FocusController>((ref) {
   return FocusController(ref: ref);
 });
+
+const Map<String, String> focusSoundAssets = {
+  'Soft Chime': 'assets/audio/ambient_1.mp3',
+  'Rain Drop': 'assets/audio/rain_1.mp3',
+  'White Noise': 'assets/audio/white_noise.mp3',
+  'Forest Bell': 'assets/audio/forest.mp3',
+  'Fireplace': 'assets/audio/fireplace_1.mp3',
+  'Piano Drift': 'assets/audio/piano_1.mp3',
+  'Thunder': 'assets/audio/rain_thunder.wav',
+};
 
 class FocusController extends ChangeNotifier {
   FocusController({required Ref ref}) : _ref = ref {
@@ -71,6 +82,7 @@ class FocusController extends ChangeNotifier {
   final Ref _ref;
 
   final NotifService _notifService = NotifService();
+  final _FocusAudioEngine _audioEngine = _FocusAudioEngine();
   Timer? _timer;
   Timer? _notificationTimer;
   StreamSubscription<FocusSessionAction>? _focusActionSub;
@@ -122,6 +134,7 @@ class FocusController extends ChangeNotifier {
   bool get allowOverrides => _allowOverrides;
   String get selectedSound => _selectedSound;
   String get selectedScenery => _selectedScenery;
+  bool get isFocusSession => _sessionType == _SessionType.focus;
 
   bool get isFullScreenActive => _isSessionActive && _fullScreenEnabled;
 
@@ -165,6 +178,7 @@ class FocusController extends ChangeNotifier {
     _persistState();
     _startUiTimer();
     _startFocusNotificationUpdates();
+    _syncAudioForState();
   }
 
   void pause() {
@@ -182,6 +196,7 @@ class FocusController extends ChangeNotifier {
     _cancelNotification();
     _persistState();
     _syncFocusSessionNotification();
+    _syncAudioForState();
   }
 
   void reset() {
@@ -198,6 +213,7 @@ class FocusController extends ChangeNotifier {
     _safeNotify();
     _persistState();
     _cancelFocusSessionNotification();
+    _syncAudioForState();
   }
 
   void nextSession() {
@@ -214,6 +230,7 @@ class FocusController extends ChangeNotifier {
     _safeNotify();
     _persistState();
     _cancelFocusSessionNotification();
+    _syncAudioForState();
   }
 
   void applySettings({
@@ -241,6 +258,7 @@ class FocusController extends ChangeNotifier {
     _cancelNotification();
     _persistState();
     _cancelFocusSessionNotification();
+    _syncAudioForState();
   }
 
   void updateSessionPreferences({
@@ -274,12 +292,16 @@ class FocusController extends ChangeNotifier {
     }
     _persistUiPrefs();
     _safeNotify();
+    _syncAudioForState();
   }
 
   void setSelectedSound(String value) {
     _selectedSound = value;
     _persistUiPrefs();
     _safeNotify();
+    if (_isSessionActive && _isRunning && _sessionType == _SessionType.focus) {
+      _syncAudioForState(restart: true);
+    }
   }
 
   void setSelectedScenery(String value) {
@@ -302,6 +324,7 @@ class FocusController extends ChangeNotifier {
     _isSessionActive = _autoStartNext;
     _safeNotify();
     _persistState();
+    _syncAudioForState();
     if (_autoStartNext) {
       start();
     }
@@ -545,6 +568,7 @@ class FocusController extends ChangeNotifier {
     _remaining = _computeRemaining(nowUtc: DateTime.now().toUtc());
     _isInitializing = false;
     _safeNotify();
+    _syncAudioForState();
     if (_isRunning) {
       if (_remaining.inSeconds <= 0) {
         _handleSessionComplete(DateTime.now().toUtc());
@@ -567,6 +591,24 @@ class FocusController extends ChangeNotifier {
     } else if (_isSessionActive) {
       _syncFocusSessionNotification();
     }
+  }
+
+  void _syncAudioForState({bool restart = false}) {
+    if (!_soundsEnabled || !_isSessionActive || _sessionType != _SessionType.focus) {
+      unawaited(_audioEngine.stop());
+      return;
+    }
+    if (_isRunning) {
+      final asset = focusSoundAssets[_selectedSound] ??
+          (focusSoundAssets.isNotEmpty ? focusSoundAssets.values.first : '');
+      if (asset.isEmpty) {
+        unawaited(_audioEngine.stop());
+      } else {
+        unawaited(_audioEngine.playLoop(asset, restart: restart));
+      }
+      return;
+    }
+    unawaited(_audioEngine.pause());
   }
 
   void _syncFocusSessionNotification() {
@@ -593,9 +635,9 @@ class FocusController extends ChangeNotifier {
       case _SessionType.focus:
         return 'Session $_sessionIndex of $_totalSessions • Deep focus session';
       case _SessionType.shortBreak:
-        return 'Break time – relax';
+        return 'Break time - relax';
       case _SessionType.longBreak:
-        return 'Break time – recharge';
+        return 'Break time - recharge';
     }
   }
 
@@ -631,7 +673,44 @@ class FocusController extends ChangeNotifier {
     _notificationTimer?.cancel();
     _focusActionSub?.cancel();
     _stopForegroundService();
+    unawaited(_audioEngine.dispose());
     super.dispose();
+  }
+}
+
+class _FocusAudioEngine {
+  final AudioPlayer _player = AudioPlayer();
+  String? _currentAsset;
+
+  Future<void> playLoop(String assetPath, {bool restart = false}) async {
+    if (restart && _player.playing) {
+      await _player.stop();
+      _currentAsset = null;
+    }
+    if (_currentAsset != assetPath) {
+      _currentAsset = assetPath;
+      await _player.setAudioSource(AudioSource.asset(assetPath));
+    }
+    await _player.setLoopMode(LoopMode.one);
+    if (!_player.playing) {
+      await _player.play();
+    }
+  }
+
+  Future<void> pause() async {
+    if (_player.playing) {
+      await _player.pause();
+    }
+  }
+
+  Future<void> stop() async {
+    if (_player.playing || _currentAsset != null) {
+      await _player.stop();
+    }
+  }
+
+  Future<void> dispose() async {
+    await _player.dispose();
   }
 }
 
