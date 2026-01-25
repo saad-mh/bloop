@@ -683,11 +683,13 @@ class _FocusAudioEngine {
   String? _currentAsset;
 
   Future<void> playLoop(String assetPath, {bool restart = false}) async {
-    if (restart && _player.playing) {
+    final bool shouldChangeSource = restart || _currentAsset != assetPath;
+
+    if (shouldChangeSource && _player.playing) {
       await _player.stop();
-      _currentAsset = null;
     }
-    if (_currentAsset != assetPath) {
+
+    if (shouldChangeSource) {
       _currentAsset = assetPath;
       await _player.setAudioSource(AudioSource.asset(assetPath));
     }
@@ -704,8 +706,11 @@ class _FocusAudioEngine {
   }
 
   Future<void> stop() async {
-    if (_player.playing || _currentAsset != null) {
-      await _player.stop();
+    if (_currentAsset != null) {
+      if (_player.playing) {
+        await _player.stop();
+      }
+      _currentAsset = null;
     }
   }
 

@@ -200,7 +200,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 					_FocusSceneryBackground(
 						scheme: scheme,
 						sceneryKey: controller.selectedScenery,
-						enabled: controller.sceneryEnabled && controller.isFocusSession,
+						enabled: controller.sceneryEnabled,
 					),
 					if (controller.dimScreenEnabled)
 						AnimatedOpacity(
@@ -1324,18 +1324,18 @@ class FocusedTodayCard extends StatelessWidget {
 								Row(
 									mainAxisAlignment: MainAxisAlignment.spaceBetween,
 									children: [
-										// Expanded(
-										// 	child: ClipRRect(
-										// 		borderRadius: BorderRadius.circular(999),
-										// 		child: LinearProgressIndicator(
-										// 			value: progress.toDouble(),
-										// 			minHeight: 6,
-										// 			backgroundColor: scheme.surfaceVariant,
-										// 			color: scheme.primary,
-										// 			year2023: false,
-										// 		),
-										// 	),
-										// ),
+										Expanded(
+											child: ClipRRect(
+												borderRadius: BorderRadius.circular(999),
+												child: LinearProgressIndicator(
+													value: progress.toDouble(),
+													minHeight: 6,
+													backgroundColor: scheme.surfaceVariant,
+													color: scheme.primary,
+													year2023: false,
+												),
+											),
+										),
 										const SizedBox(width: 12),
 										Text(
 											displayText,
