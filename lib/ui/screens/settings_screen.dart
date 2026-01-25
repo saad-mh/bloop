@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/task.dart';
+import '../../providers/permission_status_provider.dart';
 import '../../providers/settings_provider.dart';
-import '../../providers/task_provider.dart';
+import '../../providers/settings_screen_controller.dart';
+import 'package:flutter/cupertino.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -12,6 +14,7 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final controller = ref.read(settingsScreenControllerProvider);
     final colorScheme = Theme.of(context).colorScheme;
     final dialogShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
@@ -114,7 +117,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (result != null) {
-                      ref.read(settingsProvider.notifier).setThemeMode(result);
+                      controller.setThemeMode(result);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -131,14 +134,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Accent color'),
                   // subtitle: Text('#${settings.seedColor.toRadixString(16).padLeft(8, '0').toUpperCase()}'),
                   onTap: () async {
-                    final colors = <int>[
-                      0xFF607D8B, // Blue Grey
-                      0xFF3F51B5, // Indigo
-                      0xFF009688, // Teal
-                      0xFFFF5722, // Deep Orange
-                      0xFF9C27B0, // Purple
-                      0xFF4CAF50, // Green
-                    ];
+                    final colors = controller.accentColors;
                     final result = await showDialog<int>(
                       context: context,
                       builder: (_) => SimpleDialog(
@@ -180,7 +176,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (result != null) {
-                      ref.read(settingsProvider.notifier).setSeedColor(result);
+                      controller.setSeedColor(result);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -191,6 +187,47 @@ class SettingsScreen extends ConsumerWidget {
                       }
                     }
                   },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Focus session'),
+                  ),
+                ),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('Full-screen focus mode'),
+                  subtitle: const Text('Hide system UI during focus sessions'),
+                  value: settings.focusFullScreenEnabled,
+                  onChanged: controller.setFocusFullScreenEnabled,
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('App pinning'),
+                  subtitle: const Text('Keep Bloop pinned while focusing'),
+                  value: settings.focusAppPinningEnabled,
+                  onChanged: controller.setFocusAppPinningEnabled,
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  title: const Text('Allow overrides during focus'),
+                  subtitle: const Text('Let the focus session sheet adjust these settings'),
+                  value: settings.focusAllowOverrides,
+                  onChanged: controller.setFocusAllowOverrides,
                 ),
               ],
             ),
@@ -229,13 +266,18 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
+                            style: ButtonStyle(
+                              elevation: MaterialStateProperty.all(5),
+                              foregroundColor:
+                                  MaterialStateProperty.all(Colors.red),
+                            ),
                             child: const Text('Reset'),
                           ),
                         ],
                       ),
                     );
                     if (confirm == true) {
-                      ref.read(settingsProvider.notifier).resetDefaults();
+                      controller.resetDefaults();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -248,19 +290,28 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 Divider(height: 1, indent: 15, endIndent: 15),
+                ListTile(
+                  title: const Text('Required permissions'),
+                  subtitle: const Text('Review and grant app permissions'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PermissionSettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                Divider(height: 1, indent: 15, endIndent: 15),
                 SwitchListTile(
                   value: settings.notificationsEnabled,
-                  onChanged: (v) => ref
-                      .read(settingsProvider.notifier)
-                      .setNotificationsEnabled(v),
+                  onChanged: controller.setNotificationsEnabled,
                   title: const Text('Notifications'),
                 ),
                 Divider(height: 1, indent: 15, endIndent: 15),
                 SwitchListTile(
                   value: settings.focusSessionNotificationsEnabled,
-                  onChanged: (v) => ref
-                      .read(settingsProvider.notifier)
-                      .setFocusSessionNotificationsEnabled(v),
+                  onChanged: controller.setFocusSessionNotificationsEnabled,
                   title: const Text('Focus session notification'),
                   subtitle:
                       const Text('Show a persistent timer while focusing'),
@@ -288,7 +339,7 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle:
                       Text('${settings.defaultReminderMinutes} minutes before'),
                   onTap: () async {
-                    final controller = TextEditingController(
+                    final textController = TextEditingController(
                       text: settings.defaultReminderMinutes.toString(),
                     );
                     final result = await showDialog<int>(
@@ -297,7 +348,7 @@ class SettingsScreen extends ConsumerWidget {
                         shape: dialogShape,
                         title: const Text('Default reminder (minutes)'),
                         content: TextField(
-                          controller: controller,
+                          controller: textController,
                           keyboardType: TextInputType.number,
                           decoration: inputDecoration,
                         ),
@@ -309,7 +360,7 @@ class SettingsScreen extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(
                               context,
-                              int.tryParse(controller.text.trim()),
+                              int.tryParse(textController.text.trim()),
                             ),
                             child: const Text('Save'),
                           ),
@@ -317,9 +368,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (result != null) {
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setReminderMinutes(result.clamp(0, 1440));
+                      controller.setReminderMinutes(result.clamp(0, 1440));
                     }
                   },
                 ),
@@ -330,7 +379,7 @@ class SettingsScreen extends ConsumerWidget {
                     '${settings.defaultTaskTimeOffsetMinutes} minutes from now',
                   ),
                   onTap: () async {
-                    final controller = TextEditingController(
+                    final textController = TextEditingController(
                       text: settings.defaultTaskTimeOffsetMinutes.toString(),
                     );
                     final result = await showDialog<int>(
@@ -340,7 +389,7 @@ class SettingsScreen extends ConsumerWidget {
                         title:
                             const Text('Default task time (minutes from now)'),
                         content: TextField(
-                          controller: controller,
+                          controller: textController,
                           keyboardType: TextInputType.number,
                           decoration: inputDecoration,
                         ),
@@ -352,7 +401,7 @@ class SettingsScreen extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(
                               context,
-                              int.tryParse(controller.text.trim()),
+                              int.tryParse(textController.text.trim()),
                             ),
                             child: const Text('Save'),
                           ),
@@ -360,11 +409,9 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (result != null) {
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setDefaultTaskTimeOffsetMinutes(
-                            result.clamp(0, 1440),
-                          );
+                      controller.setDefaultTaskTimeOffsetMinutes(
+                        result.clamp(0, 1440),
+                      );
                     }
                   },
                 ),
@@ -389,7 +436,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (result != null) {
-                      ref.read(settingsProvider.notifier).setPriority(result);
+                      controller.setPriority(result);
                     }
                   },
                 ),
@@ -417,7 +464,7 @@ class SettingsScreen extends ConsumerWidget {
                     'Overdue, today, and future tasks with mixed priorities',
                   ),
                   onTap: () async {
-                    await ref.read(taskListProvider.notifier).addDemoTasks();
+                    await controller.addDemoTasks();
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -453,7 +500,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                     if (confirm == true) {
-                      await ref.read(taskListProvider.notifier).clearAll();
+                      await controller.clearAllTasks();
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -487,7 +534,7 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Export data'),
                   subtitle: const Text('Copy JSON to clipboard'),
                   onTap: () async {
-                    final data = ref.read(taskListProvider.notifier).exportJson();
+                    final data = controller.exportJson();
                     await Clipboard.setData(ClipboardData(text: data));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -504,14 +551,14 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Import data'),
                   subtitle: const Text('Paste JSON to restore'),
                   onTap: () async {
-                    final controller = TextEditingController();
+                    final textController = TextEditingController();
                     final json = await showDialog<String>(
                       context: context,
                       builder: (_) => AlertDialog(
                         shape: dialogShape,
                         title: const Text('Import JSON'),
                         content: TextField(
-                          controller: controller,
+                          controller: textController,
                           decoration: inputDecoration.copyWith(
                             hintText: 'Paste JSON here',
                           ),
@@ -524,14 +571,14 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                           TextButton(
                             onPressed: () =>
-                                Navigator.pop(context, controller.text.trim()),
+                                Navigator.pop(context, textController.text.trim()),
                             child: const Text('Import'),
                           ),
                         ],
                       ),
                     );
                     if (json != null && json.isNotEmpty) {
-                      await ref.read(taskListProvider.notifier).importJson(json);
+                      await controller.importJson(json);
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -546,6 +593,130 @@ class SettingsScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class PermissionSettingsScreen extends ConsumerStatefulWidget {
+  const PermissionSettingsScreen({super.key});
+
+  @override
+  ConsumerState<PermissionSettingsScreen> createState() =>
+      _PermissionSettingsScreenState();
+}
+
+class _PermissionSettingsScreenState
+    extends ConsumerState<PermissionSettingsScreen>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ref.read(permissionStatusProvider.notifier).refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.read(permissionStatusProvider.notifier).refresh();
+    }
+    super.didChangeAppLifecycleState(state);
+  }
+
+  Widget _statusIcon(PermissionStatusState status, bool? granted) {
+    if (status.isLoading || granted == null) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2, semanticsLabel: 'Loading', year2023: false,),
+      );
+    }
+    return Icon(
+      granted ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.exclamationmark_triangle,
+      color: granted ? Colors.green : Colors.orange,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final status = ref.watch(permissionStatusProvider);
+    final controller = ref.read(permissionStatusProvider.notifier);
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Required permissions'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Column(
+              children: [
+                ListTile(
+                  title: const Text('Notifications'),
+                  subtitle: const Text('Allow reminders to alert you'),
+                  trailing: _statusIcon(status, status.notificationsGranted),
+                ),
+                if (status.isAndroid && status.notificationsGranted == false)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await controller.openNotificationSettings();
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open settings'),
+                      ),
+                    ),
+                  ),
+                Divider(height: 1, indent: 15, endIndent: 15),
+                ListTile(
+                  title: const Text('Exact alarms'),
+                  subtitle: const Text('Deliver reminders at the exact time'),
+                  trailing: _statusIcon(status, status.exactAlarmGranted),
+                ),
+                if (status.isAndroid && status.exactAlarmGranted == false)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await controller.requestExactAlarmPermission();
+                        },
+                        icon: const Icon(Icons.settings),
+                        label: const Text('Open settings'),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (!status.isAndroid)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'Permissions are managed by the system on this platform.',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
+              ),
+            ),
         ],
       ),
     );

@@ -142,7 +142,9 @@ class HomeScreen extends ConsumerWidget {
       body: filteredTasksAsync.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return const Center(child: Text('No tasks yet'));
+            return const Center(child: Text('No tasks yet \n Add some using the + button!',
+              textAlign: TextAlign.center,
+            ));
           }
           return ListView.builder(
             itemCount: tasks.length,
@@ -180,6 +182,7 @@ class HomeScreen extends ConsumerWidget {
           );
         },
         heroTag: 'home_fab',
+        elevation: 2,
         child: const Icon(Icons.add),
       ),
     );
@@ -196,7 +199,7 @@ class TaskSearchDelegate extends SearchDelegate<Task?> {
   final WidgetRef ref;
 
   @override
-  String get searchFieldLabel => 'Search tasks';
+  String get searchFieldLabel => 'Search through tasks';
 
   @override
   List<Widget>? buildActions(BuildContext context) {
@@ -245,7 +248,7 @@ class TaskSearchDelegate extends SearchDelegate<Task?> {
 
   Widget _buildTaskList(BuildContext context, List<Task> filtered) {
     if (filtered.isEmpty) {
-      return const Center(child: Text('No matching tasks'));
+      return const Center(child: Text('[?] No such task found'));
     }
 
     return ListView.builder(
