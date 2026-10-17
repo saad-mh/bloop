@@ -5,18 +5,20 @@ import '../../providers/tags_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../utils/tag_utils.dart';
 import '../theme/tokens.dart';
-import '../widgets/bloop_icon_button.dart';
-import '../widgets/screen_header.dart';
+import 'bloop_icon_button.dart';
 
 /// Create, rename and delete tags, with how many open tasks each one has.
-class TagsScreen extends ConsumerStatefulWidget {
-  const TagsScreen({super.key});
+///
+/// A plain column with no scrolling or outer padding of its own, so it can sit
+/// inside a settings list. Tags are monochrome.
+class TagManager extends ConsumerStatefulWidget {
+  const TagManager({super.key});
 
   @override
-  ConsumerState<TagsScreen> createState() => _TagsScreenState();
+  ConsumerState<TagManager> createState() => _TagManagerState();
 }
 
-class _TagsScreenState extends ConsumerState<TagsScreen> {
+class _TagManagerState extends ConsumerState<TagManager> {
   final _newController = TextEditingController();
   TagNameError? _newError;
 
@@ -47,9 +49,9 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
             .read(tagsProvider.notifier)
             .renameTag(tag, name);
         if (error != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(error.message)));
         }
       case _Delete():
         await _confirmDelete(tag);
@@ -92,59 +94,38 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
     final tokens = BloopTokens.of(context);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            ScreenHeader(
-              title: 'Tags',
-              leading: BloopIconButton(
-                icon: Icons.arrow_back,
-                tooltip: 'Back',
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-            ),
-            Expanded(
-              child: tagsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (tags) => ListView(
-                  keyboardDismissBehavior:
-                      ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: const EdgeInsets.fromLTRB(
-                    BloopSpace.x5,
-                    BloopSpace.x2,
-                    BloopSpace.x5,
-                    BloopSpace.x6,
-                  ),
-                  children: [
-                    if (tags.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: BloopSpace.x4,
-                        ),
-                        child: Text(
-                          'No tags yet. Add one below, then pick it when you '
-                          'add or edit a task.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: tokens.muted,
-                          ),
-                        ),
-                      ),
-                    for (final tag in tags)
-                      _TagRow(
-                        tag: tag,
-                        openCount: counts[tag] ?? 0,
-                        onEdit: () => _edit(tag),
-                      ),
-                    const SizedBox(height: BloopSpace.x4),
-                    _buildNewTag(tokens, theme),
-                  ],
+    return tagsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(BloopSpace.x4),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(
+        padding: const EdgeInsets.all(BloopSpace.x4),
+        child: Text('Could not load tags: $e'),
+      ),
+      data: (tags) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (tags.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: BloopSpace.x4),
+              child: Text(
+                'No tags yet. Add one below, then pick it when you '
+                'add or edit a task.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: tokens.muted,
                 ),
               ),
             ),
-          ],
-        ),
+          for (final tag in tags)
+            _TagRow(
+              tag: tag,
+              openCount: counts[tag] ?? 0,
+              onEdit: () => _edit(tag),
+            ),
+          const SizedBox(height: BloopSpace.x4),
+          _buildNewTag(tokens, theme),
+        ],
       ),
     );
   }
@@ -211,7 +192,10 @@ class _TagRow extends StatelessWidget {
             child: Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(text: '#', style: TextStyle(color: tokens.muted)),
+                  TextSpan(
+                    text: '#',
+                    style: TextStyle(color: tokens.muted),
+                  ),
                   TextSpan(text: tag),
                   TextSpan(
                     text: '  ·  $openCount open',
