@@ -27,8 +27,8 @@ class TaskActionBar extends StatelessWidget {
     final tokens = BloopTokens.of(context);
     // The theme's buttons are sized for full-width use; these share a row.
     final style = OutlinedButton.styleFrom(
-      minimumSize: const Size(0, 44),
-      padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x3),
+      minimumSize: const Size(kBloopMinTouchTarget, 44),
+      padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x2),
       side: BorderSide(color: tokens.muted),
       backgroundColor: tokens.raised,
     );
