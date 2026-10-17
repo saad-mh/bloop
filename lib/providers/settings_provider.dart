@@ -21,7 +21,14 @@ class SettingsState {
     this.seedColor = 0xFF607D8B, // blueGrey
     this.lastTabIndex = 0,
     this.userName = '',
+    this.defaultFocusMinutes = defaultFocusMinutesFallback,
   });
+
+  /// Focus length until the user picks one.
+  static const int defaultFocusMinutesFallback = 25;
+
+  /// Longest focus session the controller accepts.
+  static const int maxFocusMinutes = 180;
 
   final int defaultReminderMinutes;
   final int defaultTaskTimeOffsetMinutes;
@@ -38,6 +45,9 @@ class SettingsState {
   /// Shown in the home greeting; empty until set.
   final String userName;
 
+  /// Length of a focus session started without choosing one, in minutes.
+  final int defaultFocusMinutes;
+
   SettingsState copyWith({
     int? defaultReminderMinutes,
     int? defaultTaskTimeOffsetMinutes,
@@ -51,6 +61,7 @@ class SettingsState {
     int? seedColor,
     int? lastTabIndex,
     String? userName,
+    int? defaultFocusMinutes,
   }) {
     return SettingsState(
       defaultReminderMinutes:
@@ -70,6 +81,7 @@ class SettingsState {
       seedColor: seedColor ?? this.seedColor,
       lastTabIndex: lastTabIndex ?? this.lastTabIndex,
       userName: userName ?? this.userName,
+      defaultFocusMinutes: defaultFocusMinutes ?? this.defaultFocusMinutes,
     );
   }
 }
@@ -118,6 +130,9 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         seedColor: seed ?? state.seedColor,
         lastTabIndex: box.get(_lastTabKey) as int? ?? state.lastTabIndex,
         userName: box.get('userName') as String? ?? state.userName,
+        defaultFocusMinutes: _validFocusMinutes(
+          box.get('defaultFocusMinutes') as int?,
+        ),
       );
       SharedPreferences.getInstance().then((prefs) {
         prefs.setBool(
@@ -228,6 +243,23 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       final box = Hive.box(StorageService.settingsBoxName);
       box.put('userName', trimmed);
     } catch (_) {}
+  }
+
+  void setDefaultFocusMinutes(int minutes) {
+    final clamped = minutes.clamp(1, SettingsState.maxFocusMinutes);
+    state = state.copyWith(defaultFocusMinutes: clamped);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('defaultFocusMinutes', clamped);
+    } catch (_) {}
+  }
+
+  /// A stored length, or the fallback when it is missing or out of range.
+  static int _validFocusMinutes(int? stored) {
+    if (stored == null || stored < 1 || stored > SettingsState.maxFocusMinutes) {
+      return SettingsState.defaultFocusMinutesFallback;
+    }
+    return stored;
   }
 
   void resetDefaults() {

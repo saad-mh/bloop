@@ -48,6 +48,14 @@ class SettingsScreenController {
     _ref.read(settingsProvider.notifier).setFocusAllowOverrides(value);
   }
 
+  void setUserName(String name) {
+    _ref.read(settingsProvider.notifier).setUserName(name);
+  }
+
+  void setDefaultFocusMinutes(int minutes) {
+    _ref.read(settingsProvider.notifier).setDefaultFocusMinutes(minutes);
+  }
+
   void resetDefaults() {
     _ref.read(settingsProvider.notifier).resetDefaults();
   }

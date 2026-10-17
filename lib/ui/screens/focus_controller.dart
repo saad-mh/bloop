@@ -35,6 +35,9 @@ class FocusController extends ChangeNotifier {
     _fullScreenEnabled = settings.focusFullScreenEnabled;
     _appPinningEnabled = settings.focusAppPinningEnabled;
     _allowOverrides = settings.focusAllowOverrides;
+    _focusDuration = Duration(minutes: settings.defaultFocusMinutes);
+    _plannedDurationSeconds = _focusDuration.inSeconds;
+    _remaining = _focusDuration;
     _notifService.initNotification();
     _focusActionSub = _notifService.focusSessionActions.listen((action) {
       switch (action) {
@@ -67,6 +70,9 @@ class FocusController extends ChangeNotifier {
       _fullScreenEnabled = next.focusFullScreenEnabled;
       _appPinningEnabled = next.focusAppPinningEnabled;
       _allowOverrides = next.focusAllowOverrides;
+      if (previous?.defaultFocusMinutes != next.defaultFocusMinutes) {
+        _useDefaultFocusLength(next.defaultFocusMinutes);
+      }
       _safeNotify();
     });
     _loadPersistedState();
@@ -170,6 +176,15 @@ class FocusController extends ChangeNotifier {
       case AppLifecycleState.detached:
         return;
     }
+  }
+
+  /// Applies a new default length to the next session. A session already
+  /// started keeps the length it began with.
+  void _useDefaultFocusLength(int minutes) {
+    _focusDuration = Duration(minutes: minutes);
+    if (_isSessionActive || _sessionType != _SessionType.focus) return;
+    _plannedDurationSeconds = _focusDuration.inSeconds;
+    _remaining = _focusDuration;
   }
 
   void start() {
