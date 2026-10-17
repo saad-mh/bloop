@@ -19,6 +19,20 @@ final activeTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   );
 });
 
+/// Tag chosen in the home header, or null for All.
+final selectedTagProvider = StateProvider<String?>((ref) => null);
+
+/// Active tasks narrowed by [selectedTagProvider]. Every home section reads
+/// this, so one chip filters them all at once.
+final filteredActiveTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
+  final tag = ref.watch(selectedTagProvider);
+  final tasks = ref.watch(activeTasksProvider);
+  if (tag == null) return tasks;
+  return tasks.whenData(
+    (data) => data.where((t) => t.tags.contains(tag)).toList(),
+  );
+});
+
 final completedTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   final tasks = ref.watch(taskListProvider);
   return tasks.whenData(
