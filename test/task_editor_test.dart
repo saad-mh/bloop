@@ -9,6 +9,7 @@ import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/task_editor_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
 import 'package:bloop/ui/widgets/choice_chip.dart';
+import 'package:bloop/utils/tag_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,9 +53,10 @@ class _FakeTags extends TagsNotifier {
   final added = <String>[];
 
   @override
-  Future<void> addTag(String tag) async {
+  Future<TagNameError?> addTag(String tag) async {
     added.add(tag);
     state = AsyncData([...state.value!, tag]);
+    return null;
   }
 }
 

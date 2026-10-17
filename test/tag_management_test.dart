@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:bloop/models/recurrence.dart';
 import 'package:bloop/models/task.dart';
 import 'package:bloop/providers/tags_provider.dart';
 import 'package:bloop/providers/task_provider.dart';
