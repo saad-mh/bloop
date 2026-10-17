@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../models/task.dart';
+import '../utils/tag_utils.dart';
 
 class StorageService {
   StorageService._();
@@ -69,35 +70,51 @@ class StorageService {
 
   List<String> getTags() => _tagsBox.values.toList()..sort();
 
-  Future<void> addTag(String tag) async {
-    if (tag.trim().isEmpty) return;
-    await _tagsBox.put(tag, tag);
+  /// Stores [tag] trimmed. Returns why it was refused, or null once stored.
+  Future<TagNameError?> addTag(String tag) async {
+    final error = validateTagName(tag, getTags());
+    if (error != null) return error;
+    final name = tag.trim();
+    await _tagsBox.put(name, name);
+    return null;
   }
 
+  /// Removes [tag] and strips it from every task, completed ones included.
   Future<void> deleteTag(String tag) async {
     await _tagsBox.delete(tag);
-    // Remove tag from all tasks
     for (final task in _box.values) {
       if (task.tags.contains(tag)) {
-        task.tags.remove(tag);
+        task.tags.removeWhere((t) => t == tag);
         task.updatedAt = DateTime.now().toUtc();
         await task.save();
       }
     }
   }
 
-  Future<void> renameTag(String oldTag, String newTag) async {
-    if (newTag.trim().isEmpty) return;
-    if (oldTag == newTag) return;
+  /// Renames [oldTag] on the tag list and on every task that carries it.
+  /// Returns why [newTag] was refused, or null once renamed.
+  Future<TagNameError?> renameTag(String oldTag, String newTag) async {
+    final error = validateTagName(newTag, getTags(), renaming: oldTag);
+    if (error != null) return error;
+    final name = newTag.trim();
+    if (name == oldTag) return null;
     await _tagsBox.delete(oldTag);
-    await _tagsBox.put(newTag, newTag);
+    await _tagsBox.put(name, name);
     for (final task in _box.values) {
-      final idx = task.tags.indexOf(oldTag);
-      if (idx != -1) {
-        task.tags[idx] = newTag;
-        task.updatedAt = DateTime.now().toUtc();
-        await task.save();
-      }
+      if (!task.tags.contains(oldTag)) continue;
+      // A task may already carry the new name from before the tag list
+      // tracked it; keep one copy.
+      final alreadyHasNew = task.tags.contains(name);
+      task.tags = [
+        for (final t in task.tags)
+          if (t != oldTag)
+            t
+          else if (!alreadyHasNew)
+            name,
+      ];
+      task.updatedAt = DateTime.now().toUtc();
+      await task.save();
     }
+    return null;
   }
 }
