@@ -96,10 +96,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TaskEditorScreen), findsOneWidget);
-    // The editor's reminder dropdown overflows by a pixel or two under the
-    // wide test font; that's the editor's layout, not this route.
-    final error = tester.takeException();
-    expect(error == null || error.toString().contains('overflowed'), isTrue);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('header gear opens Settings', (tester) async {

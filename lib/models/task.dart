@@ -108,6 +108,8 @@ class Task extends HiveObject {
     DateTime? completedAt,
     int? notificationId,
     List<int>? notificationIds,
+    bool clearNotes = false,
+    bool clearDueDateTime = false,
   }) {
     final resolvedReminders = remindersBefore;
     final resolvedReminderMinutesList = resolvedReminders
@@ -116,14 +118,19 @@ class Task extends HiveObject {
     return Task(
       id: id,
       title: title ?? this.title,
-      notes: notes ?? this.notes,
-      dueDateTime: dueDateTime ?? this.dueDateTime,
+      notes: clearNotes ? null : (notes ?? this.notes),
+      dueDateTime:
+          clearDueDateTime ? null : (dueDateTime ?? this.dueDateTime),
       allDay: allDay ?? this.allDay,
       recurrence: recurrence ?? this.recurrence,
+      // An explicit empty list clears the reminder; otherwise the old single
+      // value would resurface through [remindersBefore].
       reminderMinutes: reminderBefore?.inMinutes ??
-          (resolvedReminders?.isNotEmpty == true
-              ? resolvedReminders!.first.inMinutes
-              : reminderMinutes),
+          (resolvedReminders == null
+              ? reminderMinutes
+              : (resolvedReminders.isEmpty
+                  ? null
+                  : resolvedReminders.first.inMinutes)),
       reminderMinutesList: resolvedReminderMinutesList ?? reminderMinutesList,
       priority: priority ?? this.priority,
       tags: tags ?? List<String>.from(this.tags),
