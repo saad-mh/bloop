@@ -114,14 +114,7 @@ void main() {
   testWidgets('shows Tasks instead of a greeting that would be cut off', (
     tester,
   ) async {
-    // No rows: the test font is too wide for a dated TaskTile at this width.
-    await pumpHome(
-      tester,
-      width: 320,
-      overrides: [
-        filteredActiveTasksProvider.overrideWithValue(const AsyncData([])),
-      ],
-    );
+    await pumpHome(tester, width: 320);
 
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.textContaining('Good '), findsNothing);
