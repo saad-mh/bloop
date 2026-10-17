@@ -35,6 +35,15 @@ TaskSection sectionFor(Task task, DateTime now) {
   return TaskSection.today;
 }
 
+/// Whether [after] holds an active task with no due date that [before] did
+/// not, i.e. one that just landed in Whenever.
+bool addedUndatedTask(List<Task> before, List<Task> after) {
+  final known = {for (final t in before) t.id};
+  return after.any(
+    (t) => !known.contains(t.id) && !t.isCompleted && t.dueDateTime == null,
+  );
+}
+
 /// Splits [tasks] into sections, keeping their order within each one. Sections
 /// with no tasks are left out.
 List<TaskGroup> groupTasksBySection(List<Task> tasks, DateTime now) {

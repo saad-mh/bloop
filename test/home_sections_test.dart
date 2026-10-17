@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:bloop/models/task.dart';
+import 'package:bloop/providers/day_provider.dart';
 import 'package:bloop/providers/settings_provider.dart';
 import 'package:bloop/providers/task_provider.dart';
 import 'package:bloop/services/storage_service.dart';
@@ -156,4 +157,87 @@ void main() {
     expect(find.byType(SectionHeader), findsNothing);
     expect(find.byType(BloopChoiceChip), findsOneWidget);
   });
+
+  group('live updates', () {
+    Future<ProviderContainer> pumpLive(
+      WidgetTester tester,
+      List<Task> tasks, {
+      DayNotifier? day,
+    }) async {
+      tester.view.physicalSize = const Size(2400, 3600);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            settingsProvider.overrideWith((ref) => _FakeSettings()),
+            if (day != null) dayProvider.overrideWith((ref) => day),
+          ],
+          child: MaterialApp(theme: AppTheme.light, home: const HomeScreen()),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      );
+      // Startup goes loading -> data; only later changes count as additions.
+      // ignore: invalid_use_of_protected_member
+      container.read(taskListProvider.notifier).state = const AsyncLoading();
+      setTasks(container, tasks);
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    testWidgets('adding an undated task opens Whenever', (tester) async {
+      final container = await pumpLive(tester, [task('Laundry')]);
+      expect(find.text('Laundry'), findsNothing);
+
+      setTasks(container, [task('Laundry'), task('Buy milk')]);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<SectionHeader>(header('Whenever')).expanded, isTrue);
+      expect(find.text('Buy milk'), findsOneWidget);
+    });
+
+    testWidgets('adding a dated task leaves Whenever as the user left it', (
+      tester,
+    ) async {
+      final existing = task('Laundry');
+      final container = await pumpLive(tester, [existing]);
+
+      setTasks(container, [existing, task('Pay fee', due: DateTime.now())]);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Pay fee'), findsOneWidget);
+      expect(
+        tester.widget<SectionHeader>(header('Whenever')).expanded,
+        isFalse,
+      );
+    });
+
+    testWidgets('a task due today moves to Overdue after midnight', (
+      tester,
+    ) async {
+      var clock = DateTime(2026, 10, 17, 23, 30);
+      final day = DayNotifier(now: () => clock);
+      final container = await pumpLive(tester, [
+        task('Lab record', due: DateTime(2026, 10, 17, 12)),
+      ], day: day);
+      expect(header('Today'), findsOneWidget);
+      expect(header('Overdue'), findsNothing);
+
+      clock = DateTime(2026, 10, 18, 0, 0, 1);
+      await tester.pump(const Duration(minutes: 31));
+      await tester.pumpAndSettle();
+
+      expect(header('Overdue'), findsOneWidget);
+      expect(header('Today'), findsNothing);
+      expect(container.read(dayProvider), DateTime(2026, 10, 18));
+    });
+  });
+}
+
+void setTasks(ProviderContainer container, List<Task> tasks) {
+  // ignore: invalid_use_of_protected_member
+  container.read(taskListProvider.notifier).state = AsyncData(tasks);
 }

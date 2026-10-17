@@ -129,4 +129,33 @@ void main() {
       expect(groups.expand((g) => g.tasks).length, tasks.length);
     });
   });
+
+  group('addedUndatedTask', () {
+    final dated = task('dated', due: DateTime(2026, 10, 17));
+
+    test('true when a new task has no due date', () {
+      expect(addedUndatedTask([dated], [dated, task('new')]), isTrue);
+    });
+
+    test('false when the new task has a due date', () {
+      final fresh = task('new', due: DateTime(2026, 10, 18));
+      expect(addedUndatedTask([dated], [dated, fresh]), isFalse);
+    });
+
+    test('false when nothing was added, even if undated tasks exist', () {
+      final undated = task('undated');
+      expect(addedUndatedTask([undated], [undated]), isFalse);
+    });
+
+    test('false when an existing task merely loses its date', () {
+      final before = task('a', due: DateTime(2026, 10, 17));
+      final after = Task(id: 'a', title: 'a');
+      expect(addedUndatedTask([before], [after]), isFalse);
+    });
+
+    test('false for a new task that is already completed', () {
+      final done = Task(id: 'x', title: 'x', isCompleted: true);
+      expect(addedUndatedTask(const [], [done]), isFalse);
+    });
+  });
 }

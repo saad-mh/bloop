@@ -4,6 +4,7 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../../models/task.dart';
 import '../../providers/collapsed_sections_provider.dart';
+import '../../providers/day_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/tags_provider.dart';
 import '../../providers/task_provider.dart';
@@ -55,6 +56,19 @@ class HomeScreen extends ConsumerWidget {
     // Tasks-only means nothing left to do, as opposed to nothing added yet.
     final hasCompleted =
         ref.watch(completedTasksProvider).valueOrNull?.isNotEmpty ?? false;
+
+    // A task added without a date would otherwise vanish into the collapsed
+    // Whenever section.
+    ref.listen(taskListProvider, (prev, next) {
+      final before = prev?.valueOrNull;
+      final after = next.valueOrNull;
+      if (before == null || after == null) return;
+      if (addedUndatedTask(before, after)) {
+        ref
+            .read(collapsedSectionsProvider.notifier)
+            .update((c) => {...c}..remove(TaskSection.whenever));
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -168,7 +182,7 @@ class _SectionedTaskList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final collapsed = ref.watch(collapsedSectionsProvider);
-    final now = DateTime.now();
+    final now = ref.watch(dayProvider);
 
     final rows = <Object>[];
     for (final group in groupTasksBySection(tasks, now)) {
