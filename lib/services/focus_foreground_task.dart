@@ -55,7 +55,9 @@ class FocusSessionPrefs {
     final sessionType = prefs.getString(sessionTypeKey);
     final startMillis = prefs.getInt(sessionStartKey);
     final plannedDurationSeconds = prefs.getInt(plannedDurationKey);
-    if (sessionType == null || startMillis == null || plannedDurationSeconds == null) {
+    if (sessionType == null ||
+        startMillis == null ||
+        plannedDurationSeconds == null) {
       return null;
     }
     final sessionIndex = prefs.getInt(sessionIndexKey) ?? 1;
@@ -64,8 +66,10 @@ class FocusSessionPrefs {
     final isActive = prefs.getBool(isActiveKey) ?? false;
     return FocusSessionSnapshot(
       sessionType: sessionType,
-      sessionStartUtc:
-          DateTime.fromMillisecondsSinceEpoch(startMillis, isUtc: true),
+      sessionStartUtc: DateTime.fromMillisecondsSinceEpoch(
+        startMillis,
+        isUtc: true,
+      ),
       plannedDurationSeconds: plannedDurationSeconds,
       sessionIndex: sessionIndex,
       totalSessions: totalSessions,
@@ -149,13 +153,16 @@ class FocusForegroundTaskHandler extends TaskHandler {
     await _plugin?.initialize(initSettings);
     await _plugin
         ?.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-      NotifService.focusSessionChannelId,
-      NotifService.focusSessionChannelName,
-      description: NotifService.focusSessionChannelDescription,
-      importance: Importance.low,
-    ));
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            NotifService.focusSessionChannelId,
+            NotifService.focusSessionChannelName,
+            description: NotifService.focusSessionChannelDescription,
+            importance: Importance.low,
+          ),
+        );
   }
 
   Future<void> _updateNotification() async {
@@ -170,7 +177,7 @@ class FocusForegroundTaskHandler extends TaskHandler {
     final nowUtc = DateTime.now().toUtc();
     final remainingSeconds = snapshot.isRunning
         ? snapshot.plannedDurationSeconds -
-            nowUtc.difference(snapshot.sessionStartUtc).inSeconds
+              nowUtc.difference(snapshot.sessionStartUtc).inSeconds
         : snapshot.plannedDurationSeconds;
 
     if (remainingSeconds <= 0) {

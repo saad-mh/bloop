@@ -61,10 +61,9 @@ class PermissionStatusNotifier extends StateNotifier<PermissionStatusState> {
     }
 
     try {
-      final notif =
-          await NotificationService.instance.hasNotificationPermission();
-      final exact =
-          await NotificationService.instance.checkExactAlarmAllowed();
+      final notif = await NotificationService.instance
+          .hasNotificationPermission();
+      final exact = await NotificationService.instance.checkExactAlarmAllowed();
 
       state = state.copyWith(
         notificationsGranted: notif == true,
@@ -90,6 +89,8 @@ class PermissionStatusNotifier extends StateNotifier<PermissionStatusState> {
 }
 
 final permissionStatusProvider =
-    StateNotifierProvider<PermissionStatusNotifier, PermissionStatusState>((ref) {
-  return PermissionStatusNotifier();
-});
+    StateNotifierProvider<PermissionStatusNotifier, PermissionStatusState>((
+      ref,
+    ) {
+      return PermissionStatusNotifier();
+    });

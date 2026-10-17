@@ -4,8 +4,8 @@ import '../services/storage_service.dart';
 
 final tagsProvider =
     StateNotifierProvider<TagsNotifier, AsyncValue<List<String>>>((ref) {
-  return TagsNotifier(StorageService.instance)..load();
-});
+      return TagsNotifier(StorageService.instance)..load();
+    });
 
 class TagsNotifier extends StateNotifier<AsyncValue<List<String>>> {
   TagsNotifier(this._storage) : super(const AsyncValue.loading());

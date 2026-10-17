@@ -60,7 +60,8 @@ class SettingsState {
       defaultPriority: defaultPriority ?? this.defaultPriority,
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
       focusSessionNotificationsEnabled:
-          focusSessionNotificationsEnabled ?? this.focusSessionNotificationsEnabled,
+          focusSessionNotificationsEnabled ??
+          this.focusSessionNotificationsEnabled,
       focusFullScreenEnabled:
           focusFullScreenEnabled ?? this.focusFullScreenEnabled,
       focusAppPinningEnabled:
@@ -87,13 +88,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           box.get('defaultTaskTimeOffsetMinutes') as int?;
       final defaultPriorityIndex = box.get('defaultPriority') as int?;
       final notificationsEnabled = box.get('notificationsEnabled') as bool?;
-        final focusSessionNotificationsEnabled =
+      final focusSessionNotificationsEnabled =
           box.get('focusSessionNotificationsEnabled') as bool?;
-        final focusFullScreenEnabled =
-          box.get('focusFullScreenEnabled') as bool?;
-        final focusAppPinningEnabled =
-          box.get('focusAppPinningEnabled') as bool?;
-        final focusAllowOverrides = box.get('focusAllowOverrides') as bool?;
+      final focusFullScreenEnabled = box.get('focusFullScreenEnabled') as bool?;
+      final focusAppPinningEnabled = box.get('focusAppPinningEnabled') as bool?;
+      final focusAllowOverrides = box.get('focusAllowOverrides') as bool?;
       final themeModeIndex = box.get('themeMode') as int?;
       final seed = box.get('seedColor') as int?;
 
@@ -101,18 +100,26 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         defaultReminderMinutes: defaultReminder ?? state.defaultReminderMinutes,
         defaultTaskTimeOffsetMinutes:
             defaultTaskTimeOffset ?? state.defaultTaskTimeOffsetMinutes,
-        defaultPriority: (defaultPriorityIndex != null && defaultPriorityIndex >= 0 && defaultPriorityIndex < Priority.values.length)
+        defaultPriority:
+            (defaultPriorityIndex != null &&
+                defaultPriorityIndex >= 0 &&
+                defaultPriorityIndex < Priority.values.length)
             ? Priority.values[defaultPriorityIndex]
             : state.defaultPriority,
-        notificationsEnabled: notificationsEnabled ?? state.notificationsEnabled,
+        notificationsEnabled:
+            notificationsEnabled ?? state.notificationsEnabled,
         focusSessionNotificationsEnabled:
-          focusSessionNotificationsEnabled ?? state.focusSessionNotificationsEnabled,
+            focusSessionNotificationsEnabled ??
+            state.focusSessionNotificationsEnabled,
         focusFullScreenEnabled:
-          focusFullScreenEnabled ?? state.focusFullScreenEnabled,
+            focusFullScreenEnabled ?? state.focusFullScreenEnabled,
         focusAppPinningEnabled:
-          focusAppPinningEnabled ?? state.focusAppPinningEnabled,
+            focusAppPinningEnabled ?? state.focusAppPinningEnabled,
         focusAllowOverrides: focusAllowOverrides ?? state.focusAllowOverrides,
-        themeMode: themeModeIndex != null && themeModeIndex >= 0 && themeModeIndex < ThemeMode.values.length
+        themeMode:
+            themeModeIndex != null &&
+                themeModeIndex >= 0 &&
+                themeModeIndex < ThemeMode.values.length
             ? ThemeMode.values[themeModeIndex]
             : state.themeMode,
         seedColor: seed ?? state.seedColor,
@@ -239,7 +246,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   }
 }
 
-final settingsProvider =
-    StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
-  return SettingsNotifier();
-});
+final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
+  (ref) {
+    return SettingsNotifier();
+  },
+);

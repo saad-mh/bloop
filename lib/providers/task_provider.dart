@@ -9,14 +9,14 @@ import 'tags_provider.dart';
 
 final taskListProvider =
     StateNotifierProvider<TaskNotifier, AsyncValue<List<Task>>>((ref) {
-  return TaskNotifier();
-});
+      return TaskNotifier();
+    });
 
 final activeTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   final tasks = ref.watch(taskListProvider);
   return tasks.whenData(
-    (data) => data.where((t) => !t.isCompleted).toList()
-      ..sort(_sortByDatePriority),
+    (data) =>
+        data.where((t) => !t.isCompleted).toList()..sort(_sortByDatePriority),
   );
 });
 
@@ -47,8 +47,11 @@ final completedTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   final tasks = ref.watch(taskListProvider);
   return tasks.whenData(
     (data) => data.where((t) => t.isCompleted).toList()
-      ..sort((a, b) => (b.completedAt ?? b.createdAt)
-          .compareTo(a.completedAt ?? a.createdAt)),
+      ..sort(
+        (a, b) => (b.completedAt ?? b.createdAt).compareTo(
+          a.completedAt ?? a.createdAt,
+        ),
+      ),
   );
 });
 
@@ -89,7 +92,8 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   Future<List<int>?> addOrUpdate(Task task) async {
     try {
       final current = _storage.getById(task.id);
-      final currentIds = current?.notificationIds ??
+      final currentIds =
+          current?.notificationIds ??
           (current?.notificationId != null ? [current!.notificationId!] : null);
       await _notifications.cancelMany(currentIds);
       // Debug: log scheduling attempt
@@ -118,14 +122,19 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
       final targetValue = value ?? !task.isCompleted;
       if (targetValue && task.recurrence != Recurrence.none) {
         await _notifications.cancelMany(
-          task.notificationIds ?? (task.notificationId != null ? [task.notificationId!] : null),
+          task.notificationIds ??
+              (task.notificationId != null ? [task.notificationId!] : null),
         );
         final next = _recurrence.applyNextOccurrence(task);
         final newIds = await _notifications.scheduleReminders(next);
-        await _storage.upsert(next.copyWith(
-          notificationIds: newIds,
-          notificationId: newIds != null && newIds.isNotEmpty ? newIds.first : null,
-        ));
+        await _storage.upsert(
+          next.copyWith(
+            notificationIds: newIds,
+            notificationId: newIds != null && newIds.isNotEmpty
+                ? newIds.first
+                : null,
+          ),
+        );
       } else {
         await _storage.toggleComplete(task.id, value: targetValue);
         if (targetValue) {
@@ -144,7 +153,8 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
   Future<void> delete(Task task) async {
     try {
       await _notifications.cancelMany(
-        task.notificationIds ?? (task.notificationId != null ? [task.notificationId!] : null),
+        task.notificationIds ??
+            (task.notificationId != null ? [task.notificationId!] : null),
       );
       await _storage.delete(task.id);
       await load();

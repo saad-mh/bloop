@@ -27,8 +27,8 @@ class StorageService {
 
   Task? getById(String id) => _box.get(id);
 
-  List<Task> getAll() => _box.values.toList()
-    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  List<Task> getAll() =>
+      _box.values.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
   Future<void> upsert(Task task) async {
     task.updatedAt = DateTime.now().toUtc();
