@@ -225,6 +225,110 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48));
     });
 
+    testWidgets('actions show only while expanded', (tester) async {
+      Widget expandable({required bool expanded}) => TaskTile(
+        task: Task(title: 'a'),
+        now: clock,
+        expanded: expanded,
+        actions: const Text('the actions'),
+      );
+
+      await pumpThemed(tester, expandable(expanded: false));
+      expect(find.text('the actions'), findsNothing);
+
+      await pumpThemed(tester, expandable(expanded: true));
+      await tester.pumpAndSettle();
+      expect(find.text('the actions'), findsOneWidget);
+
+      await pumpThemed(tester, expandable(expanded: false));
+      await tester.pumpAndSettle();
+      expect(find.text('the actions'), findsNothing);
+    });
+
+    testWidgets('tapping the actions does not tap the row', (tester) async {
+      var opened = 0;
+      await pumpThemed(
+        tester,
+        TaskTile(
+          task: Task(title: 'a'),
+          now: clock,
+          expanded: true,
+          onTap: () => opened++,
+          actions: const Text('the actions'),
+        ),
+      );
+
+      await tester.tap(find.text('the actions'));
+      expect(opened, 0);
+    });
+
+    testWidgets('an open row is tinted, NOW keeps its own fill', (
+      tester,
+    ) async {
+      Future<Color?> fillOf(Task task, {required bool expanded}) async {
+        await pumpThemed(
+          tester,
+          TaskTile(
+            task: task,
+            now: clock,
+            expanded: expanded,
+            actions: const Text('the actions'),
+          ),
+        );
+        return tester
+            .widget<Material>(
+              find
+                  .descendant(
+                    of: find.byType(TaskTile),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .color;
+      }
+
+      final closed = await fillOf(Task(title: 'a'), expanded: false);
+      final open = await fillOf(Task(title: 'a'), expanded: true);
+      expect(closed, Colors.transparent);
+      expect(open, isNot(closed));
+
+      final nowTask = Task(
+        title: 'b',
+        dueDateTime: DateTime(2026, 10, 17, 15, 40),
+      );
+      expect(
+        await fillOf(nowTask, expanded: true),
+        await fillOf(nowTask, expanded: false),
+      );
+    });
+
+    testWidgets('tells screen readers whether the row is expanded', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      Widget expandable({required bool expanded}) => TaskTile(
+        task: Task(title: 'Budget'),
+        now: clock,
+        expanded: expanded,
+        onTap: () {},
+        actions: const Text('the actions'),
+      );
+
+      await pumpThemed(tester, expandable(expanded: false));
+      expect(
+        tester.getSemantics(find.text('Budget')),
+        containsSemantics(hasExpandedState: true, isExpanded: false),
+      );
+
+      await pumpThemed(tester, expandable(expanded: true));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.text('Budget')),
+        containsSemantics(hasExpandedState: true, isExpanded: true),
+      );
+      handle.dispose();
+    });
+
     testWidgets('swiping left deletes', (tester) async {
       var deleted = 0;
       await pumpThemed(

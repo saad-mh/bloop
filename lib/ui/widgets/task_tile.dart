@@ -13,8 +13,11 @@ import 'tag_pill.dart';
 /// One task in a list: complete circle, title, a meta line (when + tag), then
 /// a flag for high priority and a bell when a reminder is set.
 ///
-/// The circle is the only way to complete a task. Tapping the row opens it,
-/// and swiping it away deletes it when [onDelete] is set.
+/// The circle is the only way to complete a task. Tapping the row calls
+/// [onTap], and swiping it away deletes it when [onDelete] is set.
+///
+/// When [expanded], the row grows downward to show [actions]. The caller owns
+/// that state so it can keep one row open at a time.
 class TaskTile extends StatefulWidget {
   const TaskTile({
     super.key,
@@ -22,6 +25,8 @@ class TaskTile extends StatefulWidget {
     this.onToggleComplete,
     this.onTap,
     this.onDelete,
+    this.expanded = false,
+    this.actions,
     this.animateOnComplete = false,
     this.animateOnUncomplete = false,
     this.now = DateTime.now,
@@ -30,6 +35,12 @@ class TaskTile extends StatefulWidget {
   final Task task;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+
+  /// Whether [actions] are showing.
+  final bool expanded;
+
+  /// Shown under the row while [expanded]. Not built otherwise.
+  final Widget? actions;
   final ValueChanged<bool?>? onToggleComplete;
   final bool animateOnComplete;
   final bool animateOnUncomplete;
@@ -43,6 +54,7 @@ class TaskTile extends StatefulWidget {
 
 class _TaskTileState extends State<TaskTile> {
   static const _completionDuration = Duration(milliseconds: 220);
+  static const _expandDuration = Duration(milliseconds: 180);
   static const _iconSize = 18.0;
 
   bool _isCompleting = false;
@@ -145,102 +157,124 @@ class _TaskTileState extends State<TaskTile> {
       fontWeight: FontWeight.w700,
     );
 
+    final showActions = widget.expanded && widget.actions != null;
     final row = Material(
-      color: fill ?? Colors.transparent,
-      child: InkWell(
-        onTap: widget.onTap,
-        onLongPress: widget.onTap,
-        child: IgnorePointer(
-          ignoring: _isCompleting,
-          child: Container(
-            constraints: const BoxConstraints(minHeight: 56),
-            padding: const EdgeInsets.only(
-              left: BloopSpace.x1,
-              right: BloopSpace.x4,
-            ),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: tokens.border)),
-            ),
-            child: Row(
-              children: [
-                _CompleteCircle(
-                  completed: task.isCompleted,
-                  onTap: widget.onToggleComplete == null
-                      ? null
-                      : _handleToggleComplete,
-                ),
-                const SizedBox(width: BloopSpace.x1),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: BloopSpace.x2,
+      // An open row is tinted so it reads as one block with its actions; NOW
+      // and soon keep their own fill.
+      color: fill ?? (showActions ? tokens.sunken : Colors.transparent),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: tokens.border)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              expanded: widget.actions == null ? null : showActions,
+              child: InkWell(
+                onTap: widget.onTap,
+                onLongPress: widget.onTap,
+                child: IgnorePointer(
+                  ignoring: _isCompleting,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 56),
+                    padding: const EdgeInsets.only(
+                      left: BloopSpace.x1,
+                      right: BloopSpace.x4,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text(
-                          task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: titleStyle,
+                        _CompleteCircle(
+                          completed: task.isCompleted,
+                          onTap: widget.onToggleComplete == null
+                              ? null
+                              : _handleToggleComplete,
                         ),
-                        // Wraps rather than clips: a long tag plus a date and
-                        // time has little room on a 320dp phone or at large
-                        // text sizes.
-                        Wrap(
-                          spacing: BloopSpace.x2,
-                          runSpacing: BloopSpace.x1,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _when(
-                              task,
-                              status,
-                              now,
-                              metaStyle,
-                              strongMeta,
-                              tokens,
+                        const SizedBox(width: BloopSpace.x1),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: BloopSpace.x2,
                             ),
-                            if (task.tags.isNotEmpty)
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 160,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  task.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: titleStyle,
                                 ),
-                                child: TagPill(label: task.tags.first),
-                              ),
-                          ],
+                                // Wraps rather than clips: a long tag plus a date and
+                                // time has little room on a 320dp phone or at large
+                                // text sizes.
+                                Wrap(
+                                  spacing: BloopSpace.x2,
+                                  runSpacing: BloopSpace.x1,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    _when(
+                                      task,
+                                      status,
+                                      now,
+                                      metaStyle,
+                                      strongMeta,
+                                      tokens,
+                                    ),
+                                    if (task.tags.isNotEmpty)
+                                      ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 160,
+                                        ),
+                                        child: TagPill(label: task.tags.first),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                        if (task.priority == Priority.high && !task.isCompleted)
+                          Padding(
+                            padding: const EdgeInsets.only(left: BloopSpace.x3),
+                            child: Semantics(
+                              label: 'High priority',
+                              child: Icon(
+                                // Late is told by weight, not colour: a filled flag.
+                                isLate ? Icons.flag : Icons.flag_outlined,
+                                size: _iconSize,
+                                color: tokens.ink,
+                              ),
+                            ),
+                          ),
+                        if (task.remindersBefore.isNotEmpty &&
+                            !task.isCompleted)
+                          Padding(
+                            padding: const EdgeInsets.only(left: BloopSpace.x3),
+                            child: Semantics(
+                              label: 'Reminder set',
+                              child: Icon(
+                                Icons.notifications_none_rounded,
+                                size: _iconSize,
+                                color: tokens.muted,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
                 ),
-                if (task.priority == Priority.high && !task.isCompleted)
-                  Padding(
-                    padding: const EdgeInsets.only(left: BloopSpace.x3),
-                    child: Semantics(
-                      label: 'High priority',
-                      child: Icon(
-                        // Late is told by weight, not colour: a filled flag.
-                        isLate ? Icons.flag : Icons.flag_outlined,
-                        size: _iconSize,
-                        color: tokens.ink,
-                      ),
-                    ),
-                  ),
-                if (task.remindersBefore.isNotEmpty && !task.isCompleted)
-                  Padding(
-                    padding: const EdgeInsets.only(left: BloopSpace.x3),
-                    child: Semantics(
-                      label: 'Reminder set',
-                      child: Icon(
-                        Icons.notifications_none_rounded,
-                        size: _iconSize,
-                        color: tokens.muted,
-                      ),
-                    ),
-                  ),
-              ],
+              ),
             ),
-          ),
+            AnimatedSize(
+              duration: _expandDuration,
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: showActions
+                  ? widget.actions
+                  : const SizedBox(width: double.infinity),
+            ),
+          ],
         ),
       ),
     );
