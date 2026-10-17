@@ -8,6 +8,7 @@ import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/home_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
 import 'package:bloop/ui/widgets/choice_chip.dart';
+import 'package:bloop/ui/widgets/screen_header.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,10 +40,24 @@ void main() {
     for (final tag in ['college', 'robotics']) {
       await tags.put(tag, tag);
     }
+    // Due today, so they show in the open Today section; undated tasks start
+    // collapsed under Whenever.
+    final today = DateTime.now();
+    final dueToday = DateTime(today.year, today.month, today.day, 23, 59);
     for (final task in [
-      Task(id: 'a', title: 'Lab record', tags: ['college']),
-      Task(id: 'b', title: 'Budget sheet', tags: ['robotics']),
-      Task(id: 'c', title: 'Buy milk'),
+      Task(
+        id: 'a',
+        title: 'Lab record',
+        tags: ['college'],
+        dueDateTime: dueToday,
+      ),
+      Task(
+        id: 'b',
+        title: 'Budget sheet',
+        tags: ['robotics'],
+        dueDateTime: dueToday,
+      ),
+      Task(id: 'c', title: 'Buy milk', dueDateTime: dueToday),
       Task(
         id: 'd',
         title: 'Old essay',
@@ -108,7 +123,13 @@ void main() {
   testWidgets('old title and filter menu are gone', (tester) async {
     await pumpHome(tester);
 
-    expect(find.text('Today'), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(ScreenHeader),
+        matching: find.text('Today'),
+      ),
+      findsNothing,
+    );
     expect(find.byType(PopupMenuButton<String>), findsNothing);
     expect(find.byTooltip('Settings'), findsOneWidget);
     expect(find.byTooltip('Search'), findsOneWidget);

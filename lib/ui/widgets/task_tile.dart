@@ -143,31 +143,36 @@ class _TaskTileState extends State<TaskTile> {
                                         : textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
-                                  Row(
+                                  // Wraps rather than clips: with the overdue badge and
+                                  // delete button there is little room on narrow phones
+                                  // or at large text sizes.
+                                  Wrap(
+                                    spacing: 10,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
                                       if (widget.task.tags.isNotEmpty)
-                                        Flexible(child: TagPill(label: widget.task.tags.first)),
-                                      if (widget.task.tags.isNotEmpty)
-                                        const SizedBox(width: 10),
-                                      if (dueDateTime != null)
+                                        TagPill(label: widget.task.tags.first),
+                                      if (dateText != null)
+                                        Text(
+                                          dateText,
+                                          style: textTheme.bodyMedium
+                                              ?.copyWith(color: tokens.muted),
+                                        ),
+                                      if (timeText != null)
                                         Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            if (dateText != null)
-                                              Text(
-                                                dateText,
-                                                style: textTheme.bodyMedium
-                                                    ?.copyWith(color: tokens.muted),
-                                              ),
-                                            if (dateText != null) const SizedBox(width: 8),
-                                            if (timeText != null) ...[
-                                              Icon(
-                                                Icons.schedule_rounded,
-                                                size: 16,
-                                                color: tokens.muted,
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
+                                            Icon(
+                                              Icons.schedule_rounded,
+                                              size: 16,
+                                              color: tokens.muted,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
                                                 timeText,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: textTheme.bodyMedium?.copyWith(
                                                   color: isOverdue
                                                       ? tokens.ink
@@ -176,7 +181,7 @@ class _TaskTileState extends State<TaskTile> {
                                                       isOverdue ? FontWeight.w600 : null,
                                                 ),
                                               ),
-                                            ],
+                                            ),
                                           ],
                                         ),
                                     ],

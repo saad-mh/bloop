@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show DateFormat;
 
 import '../../models/task.dart';
+import '../../providers/collapsed_sections_provider.dart';
+import '../../providers/day_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/tags_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../utils/greeting.dart';
+import '../../utils/task_sections.dart';
 import '../theme/tokens.dart';
 import '../widgets/bloop_icon_button.dart';
 import '../widgets/choice_chip.dart';
 import '../widgets/floating_nav.dart';
 import '../widgets/screen_header.dart';
+import '../widgets/section_header.dart';
 import '../widgets/task_tile.dart';
 import 'completed_screen.dart';
 import 'settings_screen.dart';
@@ -51,6 +56,19 @@ class HomeScreen extends ConsumerWidget {
     // Tasks-only means nothing left to do, as opposed to nothing added yet.
     final hasCompleted =
         ref.watch(completedTasksProvider).valueOrNull?.isNotEmpty ?? false;
+
+    // A task added without a date would otherwise vanish into the collapsed
+    // Whenever section.
+    ref.listen(taskListProvider, (prev, next) {
+      final before = prev?.valueOrNull;
+      final after = next.valueOrNull;
+      if (before == null || after == null) return;
+      if (addedUndatedTask(before, after)) {
+        ref
+            .read(collapsedSectionsProvider.notifier)
+            .update((c) => {...c}..remove(TaskSection.whenever));
+      }
+    });
 
     return Scaffold(
       body: SafeArea(
@@ -101,42 +119,12 @@ class HomeScreen extends ConsumerWidget {
                             ? 'No tasks tagged "$selectedTag"'
                             : hasCompleted
                             ? "You're all done!"
-                            : 'No tasks yet \n Add some using the + button!',
+                            : 'No tasks yet\nTap + to add your first one.',
                         textAlign: TextAlign.center,
                       ),
                     );
                   }
-                  return ListView.builder(
-                    padding: EdgeInsets.only(
-                      bottom: floatingNavClearance(context),
-                    ),
-                    itemCount: tasks.length,
-                    itemBuilder: (context, index) {
-                      final task = tasks[index];
-                      return TaskTile(
-                        key: ValueKey(task.id),
-                        task: task,
-                        animateOnComplete: true,
-                        onToggleComplete: (checked) async {
-                          await ref
-                              .read(taskListProvider.notifier)
-                              .toggleComplete(task, value: checked);
-                        },
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TaskEditorScreen(task: task),
-                            ),
-                          );
-                        },
-                        onDelete: () async {
-                          await ref
-                              .read(taskListProvider.notifier)
-                              .delete(task);
-                        },
-                      );
-                    },
-                  );
+                  return _SectionedTaskList(tasks: tasks);
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('Error: $e')),
@@ -181,6 +169,72 @@ class HomeScreen extends ConsumerWidget {
         MaterialPageRoute(builder: (_) => TaskEditorScreen(task: selectedTask)),
       );
     }
+  }
+}
+
+/// Active tasks under collapsible Overdue / Today / Upcoming / Whenever
+/// headers. Empty sections are left out.
+class _SectionedTaskList extends ConsumerWidget {
+  const _SectionedTaskList({required this.tasks});
+
+  final List<Task> tasks;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final collapsed = ref.watch(collapsedSectionsProvider);
+    final now = ref.watch(dayProvider);
+
+    final rows = <Object>[];
+    for (final group in groupTasksBySection(tasks, now)) {
+      rows.add(group);
+      if (!collapsed.contains(group.section)) rows.addAll(group.tasks);
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.only(bottom: floatingNavClearance(context)),
+      itemCount: rows.length,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+        if (row is TaskGroup) {
+          final section = row.section;
+          return SectionHeader(
+            key: ValueKey('section-${section.name}'),
+            label: section.label,
+            count: row.tasks.length,
+            date: section == TaskSection.today
+                ? DateFormat.MMMEd().format(now)
+                : null,
+            expanded: !collapsed.contains(section),
+            onToggle: () => ref
+                .read(collapsedSectionsProvider.notifier)
+                .update(
+                  (current) => current.contains(section)
+                      ? ({...current}..remove(section))
+                      : {...current, section},
+                ),
+          );
+        }
+        final task = row as Task;
+        return TaskTile(
+          key: ValueKey(task.id),
+          task: task,
+          animateOnComplete: true,
+          onToggleComplete: (checked) async {
+            await ref
+                .read(taskListProvider.notifier)
+                .toggleComplete(task, value: checked);
+          },
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => TaskEditorScreen(task: task)),
+            );
+          },
+          onDelete: () async {
+            await ref.read(taskListProvider.notifier).delete(task);
+          },
+        );
+      },
+    );
   }
 }
 
