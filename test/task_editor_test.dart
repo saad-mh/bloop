@@ -13,18 +13,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Records saves instead of touching Hive and the notification plugin.
 class _FakeTasks extends TaskNotifier {
   final saved = <Task>[];
   final deleted = <String>[];
+  bool failNextSave = false;
 
   @override
   Future<void> load() async {}
 
   @override
   Future<List<int>?> addOrUpdate(Task task) async {
+    if (failNextSave) {
+      // What the real notifier does when storage throws.
+      failNextSave = false;
+      state = AsyncValue.error('disk full', StackTrace.current);
+      return null;
+    }
+    state = const AsyncValue.data([]);
     saved.add(task);
     return <int>[];
   }
@@ -273,7 +282,9 @@ void main() {
       expect(tasks.saved.single.tags, ['college', 'robotics']);
     });
 
-    testWidgets('a new tag is stored and selected', (tester) async {
+    testWidgets('a new tag is selected now and stored when saved', (
+      tester,
+    ) async {
       await openEditor(tester);
       await typeTitle(tester, 'Lab report');
 
@@ -281,8 +292,26 @@ void main() {
       await tester.enterText(find.byType(TextField).last, 'errands');
       await tap(tester, find.text('Add'));
 
-      expect(tags.added, ['errands']);
       expect(chip(tester, 'errands').selected, isTrue);
+      expect(tags.added, isEmpty);
+
+      await tap(tester, find.text('Add task'));
+      expect(tags.added, ['errands']);
+      expect(tasks.saved.single.tags, ['errands']);
+    });
+
+    testWidgets('a new tag is not stored when the page is discarded', (
+      tester,
+    ) async {
+      await openEditor(tester);
+
+      await tap(tester, find.text('New tag'));
+      await tester.enterText(find.byType(TextField).last, 'errands');
+      await tap(tester, find.text('Add'));
+      await tap(tester, find.byTooltip('Close'));
+      await tap(tester, find.text('Discard'));
+
+      expect(tags.added, isEmpty);
     });
   });
 
@@ -305,6 +334,7 @@ void main() {
       await openEditor(tester);
       await typeTitle(tester, 'Water plants');
 
+      await tap(tester, find.text('Tomorrow'));
       await tap(tester, find.text('More options'));
       await tester.enterText(find.widgetWithText(TextField, 'Notes'), 'Fern');
       await tap(tester, find.text('Never'));
@@ -324,6 +354,35 @@ void main() {
 
       await tap(tester, find.text('More options'));
       expect(find.text('Reminder 2'), findsOneWidget);
+    });
+  });
+
+  group('more options, without a date', () {
+    testWidgets('Repeat waits for a date', (tester) async {
+      await openEditor(tester);
+
+      await tap(tester, find.text('More options'));
+      expect(find.text('Pick a date first'), findsWidgets);
+      final repeat = tester.widget<DropdownButtonFormField<Recurrence>>(
+        find.byType(DropdownButtonFormField<Recurrence>),
+      );
+      expect(repeat.onChanged, isNull);
+
+      await tap(tester, find.text('Tomorrow'));
+      final enabled = tester.widget<DropdownButtonFormField<Recurrence>>(
+        find.byType(DropdownButtonFormField<Recurrence>),
+      );
+      expect(enabled.onChanged, isNotNull);
+    });
+
+    testWidgets('Clear also resets the repeat', (tester) async {
+      final task = dueSoon()..recurrence = Recurrence.weekly;
+      await openEditor(tester, task: task);
+
+      await tap(tester, find.text('Clear'));
+      await tap(tester, find.text('Save'));
+
+      expect(tasks.saved.single.recurrence, Recurrence.none);
     });
   });
 
@@ -417,6 +476,74 @@ void main() {
 
       expect(find.textContaining('already passed'), findsOneWidget);
       expect(tasks.saved, isEmpty);
+    });
+
+    testWidgets('a date far outside the picker window still opens it', (
+      tester,
+    ) async {
+      final old = Task(
+        title: 'Ancient',
+        dueDateTime: DateTime.now().subtract(const Duration(days: 900)),
+      );
+      await openEditor(tester, task: old);
+
+      // Opening the picker asserts initialDate is in range.
+      final label = DateFormat('EEE d MMM').format(old.dueDateTime!);
+      await tap(tester, find.text(label));
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('OK'), findsOneWidget);
+    });
+
+    testWidgets('adding a time trims reminders to what a timed task holds', (
+      tester,
+    ) async {
+      final allDay = Task(
+        title: 'Three',
+        dueDateTime: DateTime.now().add(const Duration(days: 3)),
+        allDay: true,
+        reminderMinutesList: [5, 15, 30],
+        reminderMinutes: 5,
+      );
+      await openEditor(tester, task: allDay);
+
+      await tap(tester, find.text('Add time'));
+      await tap(tester, find.text('OK'));
+      await tap(tester, find.text('Save'));
+
+      expect(tasks.saved.single.remindersBefore.length, 2);
+    });
+
+    testWidgets('all-day with a reminder says what to change', (tester) async {
+      await openEditor(tester);
+      await typeTitle(tester, 'Today thing');
+
+      await tap(tester, find.text('Today'));
+      await tap(tester, find.text('More options'));
+      await tap(tester, find.text('No reminder'));
+      await tap(tester, find.text('5 minutes before').last);
+      await tap(tester, find.text('Add task'));
+
+      expect(
+        find.textContaining('Add a time or pick a later day'),
+        findsOneWidget,
+      );
+      expect(tasks.saved, isEmpty);
+    });
+
+    testWidgets('a failed save stays on the page and says so', (tester) async {
+      await openEditor(tester);
+      await typeTitle(tester, 'Will fail');
+      tasks.failNextSave = true;
+
+      await tap(tester, find.text('Add task'));
+
+      expect(find.text('Could not save this task. Try again.'), findsOneWidget);
+      expect(editor, findsOneWidget);
+      // Saving can be tried again.
+      await tap(tester, find.text('Add task'));
+      expect(tasks.saved, isNotEmpty);
+      expect(editor, findsNothing);
     });
 
     testWidgets('Delete asks first, then removes the task', (tester) async {

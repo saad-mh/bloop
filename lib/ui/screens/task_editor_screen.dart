@@ -36,6 +36,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     Duration(days: 1),
   ];
 
+  /// Bar padding, button height and a gap: how far up a snackbar must sit to
+  /// clear the Add / Save bar.
+  static const double _bottomBarClearance = 96;
+
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
   DateTime? _dueDateTime;
@@ -44,6 +48,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Priority _priority = Priority.medium;
   final List<Duration> _reminders = [];
   final List<String> _tags = [];
+
+  /// Tags made on this page. They are stored when the task is saved, so
+  /// discarding the page leaves no tag behind.
+  final List<String> _pendingTags = [];
 
   bool _titleMissing = false;
   bool _moreOpen = false;
@@ -105,11 +113,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     super.dispose();
   }
 
+  bool _wasDirty = false;
+
   void _onTextChanged() {
-    // Rebuild so the discard guard follows the text, and drop the title error
-    // once there is something to save.
+    // Only the discard guard and the title error depend on the text, so skip
+    // the rebuild (and with it every chip) for keystrokes that change neither.
+    final dirty = _isDirty;
+    final clearError = _titleMissing && _titleController.text.trim().isNotEmpty;
+    if (dirty == _wasDirty && !clearError) return;
     setState(() {
-      if (_titleController.text.trim().isNotEmpty) _titleMissing = false;
+      _wasDirty = dirty;
+      if (clearError) _titleMissing = false;
     });
   }
 
@@ -172,15 +186,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     setState(() {
       _dueDateTime = null;
       _allDay = false;
-      // Reminders count back from the due date, so they go with it.
+      // Reminders and repeats both count from the due date, so they go too.
       _reminders.clear();
+      _recurrence = Recurrence.none;
     });
   }
 
-  void _setTime(TimeOfDay time) {
+  /// Gives the due date [time], on [on] if given (else the current date).
+  void _setTime(TimeOfDay time, {DateTime? on}) {
     setState(() {
       final hadTime = _hasTime;
-      final base = _dueDateTime ?? DateTime.now();
+      final base = on ?? _dueDateTime ?? DateTime.now();
       _allDay = false;
       _dueDateTime = DateTime(
         base.year,
@@ -189,6 +205,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         time.hour,
         time.minute,
       );
+      // A timed task holds one reminder fewer; drop the extra so the list the
+      // user sees is the one that gets saved.
+      if (_reminders.length > _maxReminders) {
+        _reminders.removeRange(_maxReminders, _reminders.length);
+      }
       // Honour the default-reminder setting the first time a time is chosen.
       if (!hadTime &&
           !_reminderTouched &&
@@ -208,17 +229,33 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         _dueDateTime = DateTime(due.year, due.month, due.day);
       });
     } else {
-      _setTime(_defaultTimeOfDay());
+      // Late in the evening the default time rolls past midnight; follow it
+      // onto the next day rather than landing in the past.
+      final now = DateTime.now();
+      final fallback = now.add(
+        Duration(
+          minutes: ref.read(settingsProvider).defaultTaskTimeOffsetMinutes,
+        ),
+      );
+      final rolledOver = isSameDay(due, now) && !isSameDay(fallback, now);
+      _setTime(
+        TimeOfDay.fromDateTime(fallback),
+        on: rolledOver ? fallback : due,
+      );
     }
   }
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
+    final initial = _dueDateTime ?? now;
+    // The window always includes the current date, however far off it is.
+    final earliest = now.subtract(const Duration(days: 365));
+    final latest = now.add(const Duration(days: 365 * 5));
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dueDateTime ?? now,
-      firstDate: now.subtract(const Duration(days: 365)),
-      lastDate: now.add(const Duration(days: 365 * 5)),
+      initialDate: initial,
+      firstDate: initial.isBefore(earliest) ? initial : earliest,
+      lastDate: initial.isAfter(latest) ? initial : latest,
     );
     if (picked == null || !mounted) return;
     _setDate(picked);
@@ -263,9 +300,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       builder: (_) => const _NewTagDialog(),
     );
     if (result == null || result.isEmpty || !mounted) return;
-    // Store it so it shows up in the picker (and the home filter) next time.
-    await ref.read(tagsProvider.notifier).addTag(result);
-    if (!mounted) return;
+    final known = ref.read(tagsProvider).valueOrNull ?? const <String>[];
+    if (!known.contains(result) && !_pendingTags.contains(result)) {
+      setState(() => _pendingTags.add(result));
+    }
     _toggleTag(result, true);
   }
 
@@ -325,7 +363,17 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   void _snack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        // Float above the Add / Save bar instead of covering it.
+        margin: const EdgeInsets.fromLTRB(
+          BloopSpace.x4,
+          0,
+          BloopSpace.x4,
+          _bottomBarClearance,
+        ),
+      ),
     );
   }
 
@@ -364,7 +412,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
         for (final r in reminders) due.subtract(r),
       ];
       if (!times.any((t) => t.isAfter(now))) {
-        _snack('That time has already passed. Choose a later one.');
+        _snack(
+          hasTime
+              ? 'That time has already passed. Choose a later one.'
+              : 'That reminder would already have gone off. '
+                    'Add a time or pick a later day.',
+        );
         return;
       }
     }
@@ -385,8 +438,19 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     );
 
     setState(() => _saving = true);
+    // Store the tags made here only now that the task is going in.
+    for (final tag in _pendingTags.where(_tags.contains)) {
+      await ref.read(tagsProvider.notifier).addTag(tag);
+    }
     final newIds = await ref.read(taskListProvider.notifier).addOrUpdate(task);
     if (!mounted) return;
+    // addOrUpdate reports every failure as null, so tell a storage error from
+    // missing notification permissions by the list's state.
+    if (ref.read(taskListProvider).hasError) {
+      setState(() => _saving = false);
+      _snack('Could not save this task. Try again.');
+      return;
+    }
     if (newIds == null && (hasTime || reminders.isNotEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -588,11 +652,11 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Widget _buildTags(BloopTokens tokens) {
     final stored = ref.watch(tagsProvider).valueOrNull ?? const <String>[];
     // A tag already on the task stays pickable even if it left the list.
-    final all = [
+    final all = <String>{
       ...stored,
-      for (final tag in _tags)
+      for (final tag in [..._pendingTags, ..._tags])
         if (!stored.contains(tag)) tag,
-    ];
+    }.toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,15 +733,22 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
           ),
           const SizedBox(height: BloopSpace.x2),
           DropdownButtonFormField<Recurrence>(
+            // initialValue is read once; rekey so Clear can reset the field.
+            key: ValueKey('repeat-${_recurrence.name}'),
             initialValue: _recurrence,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Repeat'),
+            decoration: InputDecoration(
+              labelText: 'Repeat',
+              helperText: _hasDate ? null : 'Pick a date first',
+            ),
             items: [
               for (final r in Recurrence.values)
                 DropdownMenuItem(value: r, child: Text(_recurrenceLabel(r))),
             ],
-            onChanged: (r) =>
-                setState(() => _recurrence = r ?? Recurrence.none),
+            // A repeat counts from the due date, so it needs one.
+            onChanged: _hasDate
+                ? (r) => setState(() => _recurrence = r ?? Recurrence.none)
+                : null,
           ),
           const SizedBox(height: BloopSpace.x4),
           ..._buildReminders(),
