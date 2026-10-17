@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/task.dart';
-import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
 import '../widgets/task_tile.dart';
 import 'task_editor_screen.dart';
@@ -17,7 +16,6 @@ class CompletedScreen extends ConsumerStatefulWidget {
 
 class _CompletedScreenState extends ConsumerState<CompletedScreen> {
   late final ConfettiController _confettiController;
-  bool _isActive = false;
   bool _playedForActiveSession = false;
 
   @override
@@ -61,16 +59,8 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
     final allTodayComplete =
         todayTasks.isNotEmpty && completedToday == todayTasks.length;
     final showTodaySummary = todayTasks.isNotEmpty && completedToday > 0;
-    final settings = ref.watch(settingsProvider);
-    final isActive = settings.lastTabIndex == 1;
     final textToShow = allTasks.isEmpty ? "You dont even have any tasks" : "No tasks completed yet";
-    if (isActive != _isActive) {
-      _isActive = isActive;
-      if (_isActive) {
-        _playedForActiveSession = false;
-      }
-    }
-    if (_isActive && allTodayComplete && !_playedForActiveSession) {
+    if (allTodayComplete && !_playedForActiveSession) {
       _playedForActiveSession = true;
       _playConfetti();
     }

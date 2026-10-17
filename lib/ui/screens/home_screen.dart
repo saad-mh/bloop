@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../models/task.dart';
 import '../../providers/task_provider.dart';
+import '../widgets/bloop_icon_button.dart';
+import '../widgets/floating_nav.dart';
 import '../widgets/task_tile.dart';
+import 'completed_screen.dart';
+import 'settings_screen.dart';
 import 'task_editor_screen.dart';
 
 // Filter provider
@@ -50,6 +54,13 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: MediaQuery.of(context).size.height * 0.1,
+        leading: BloopIconButton(
+          icon: Icons.settings_outlined,
+          tooltip: 'Settings',
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+        ),
         title: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,6 +73,14 @@ class HomeScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          // TODO(#13): remove once Completed is a section of this list.
+          BloopIconButton(
+            icon: Icons.done_all,
+            tooltip: 'Completed',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CompletedScreen()),
+            ),
+          ),
           PopupMenuButton<String>(
             onSelected: (value) {
               ref.read(taskFilterProvider.notifier).state = value;
@@ -147,6 +166,7 @@ class HomeScreen extends ConsumerWidget {
             ));
           }
           return ListView.builder(
+            padding: EdgeInsets.only(bottom: floatingNavClearance(context)),
             itemCount: tasks.length,
             itemBuilder: (context, index) {
               final task = tasks[index];
@@ -174,16 +194,6 @@ class HomeScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const TaskEditorScreen()),
-          );
-        },
-        heroTag: 'home_fab',
-        elevation: 2,
-        child: const Icon(Icons.add),
       ),
     );
   }
