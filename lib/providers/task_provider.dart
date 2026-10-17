@@ -5,6 +5,7 @@ import '../models/recurrence.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/recurrence_service.dart';
+import '../utils/demo_tasks.dart';
 import 'tags_provider.dart';
 
 final taskListProvider =
@@ -180,49 +181,12 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
 
   Future<void> addDemoTasks() async {
     try {
-      final now = DateTime.now();
-      final todayMorning = DateTime(now.year, now.month, now.day, 9, 0);
-      final todayEvening = DateTime(now.year, now.month, now.day, 18, 0);
+      final demoTasks = buildDemoTasks(DateTime.now());
 
-      final demoTasks = <Task>[
-        Task(
-          title: 'Submit report',
-          notes: 'Send weekly report to the team',
-          dueDateTime: now.subtract(const Duration(days: 1, hours: 2)),
-          priority: Priority.high,
-        ),
-        Task(
-          title: 'Call dentist',
-          dueDateTime: now.subtract(const Duration(days: 2)),
-          priority: Priority.medium,
-        ),
-        Task(
-          title: 'Standup prep',
-          dueDateTime: todayMorning.add(const Duration(hours: 1)),
-          priority: Priority.high,
-        ),
-        Task(
-          title: 'Grocery run',
-          dueDateTime: todayEvening,
-          priority: Priority.low,
-        ),
-        Task(
-          title: 'Plan sprint',
-          dueDateTime: now.add(const Duration(days: 1, hours: 3)),
-          priority: Priority.medium,
-        ),
-        Task(
-          title: 'Book flights',
-          dueDateTime: now.add(const Duration(days: 7, hours: 2)),
-          priority: Priority.low,
-        ),
-        Task(
-          title: 'Annual review',
-          dueDateTime: now.add(const Duration(days: 30)),
-          priority: Priority.high,
-        ),
-      ];
-
+      // The tag picker lists the `tags` box, not the tags found on tasks.
+      for (final tag in {for (final t in demoTasks) ...t.tags}) {
+        await _storage.addTag(tag);
+      }
       for (final task in demoTasks) {
         await addOrUpdate(task);
       }

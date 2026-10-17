@@ -373,7 +373,7 @@ class SettingsScreen extends ConsumerWidget {
                 ListTile(
                   title: const Text('Add demo tasks'),
                   subtitle: const Text(
-                    'Overdue, today, and future tasks with mixed priorities',
+                    'One of every row state, for testing',
                   ),
                   onTap: () async {
                     await controller.addDemoTasks();

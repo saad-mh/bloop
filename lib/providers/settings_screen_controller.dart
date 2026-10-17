@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/task.dart';
 import '../providers/settings_provider.dart';
+import '../providers/tags_provider.dart';
 import '../providers/task_provider.dart';
 
 class SettingsScreenController {
@@ -65,8 +66,9 @@ class SettingsScreenController {
     _ref.read(settingsProvider.notifier).setPriority(priority);
   }
 
-  Future<void> addDemoTasks() {
-    return _ref.read(taskListProvider.notifier).addDemoTasks();
+  Future<void> addDemoTasks() async {
+    await _ref.read(taskListProvider.notifier).addDemoTasks();
+    await _ref.read(tagsProvider.notifier).load();
   }
 
   Future<void> clearAllTasks() {
