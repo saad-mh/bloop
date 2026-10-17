@@ -35,7 +35,9 @@ class TagsScreen extends ConsumerWidget {
                             title: const Text('Rename tag'),
                             content: TextField(
                               controller: controller,
-                              decoration: const InputDecoration(hintText: 'Tag'),
+                              decoration: const InputDecoration(
+                                hintText: 'Tag',
+                              ),
                             ),
                             actions: [
                               TextButton(
@@ -44,7 +46,9 @@ class TagsScreen extends ConsumerWidget {
                               ),
                               TextButton(
                                 onPressed: () => Navigator.pop(
-                                    context, controller.text.trim()),
+                                  context,
+                                  controller.text.trim(),
+                                ),
                                 child: const Text('Save'),
                               ),
                             ],

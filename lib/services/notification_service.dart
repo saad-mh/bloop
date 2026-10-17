@@ -1,5 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
-  as fln;
+    as fln;
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -17,12 +17,16 @@ class NotificationService {
   Future<void> init() async {
     tz.initializeTimeZones();
     try {
-      final localTz = await _methodChannel.invokeMethod<String>('getLocalTimezone');
+      final localTz = await _methodChannel.invokeMethod<String>(
+        'getLocalTimezone',
+      );
       if (localTz != null) {
         try {
           tz.setLocalLocation(tz.getLocation(localTz));
           // ignore: avoid_print
-          print('NotificationService: timezone set to $localTz (tz.local=${tz.local.name})');
+          print(
+            'NotificationService: timezone set to $localTz (tz.local=${tz.local.name})',
+          );
         } catch (inner) {
           // Try to normalize common legacy names (e.g. Asia/Calcutta -> Asia/Kolkata)
           String normalized = localTz;
@@ -32,24 +36,33 @@ class NotificationService {
           try {
             tz.setLocalLocation(tz.getLocation(normalized));
             // ignore: avoid_print
-            print('NotificationService: timezone normalized from $localTz to $normalized (tz.local=${tz.local.name})');
+            print(
+              'NotificationService: timezone normalized from $localTz to $normalized (tz.local=${tz.local.name})',
+            );
           } catch (inner2) {
             // ignore: avoid_print
-            print('NotificationService: failed to set timezone for $localTz and normalized $normalized: $inner2');
+            print(
+              'NotificationService: failed to set timezone for $localTz and normalized $normalized: $inner2',
+            );
             // leave tz.local as default
           }
         }
       } else {
         // ignore: avoid_print
-        print('NotificationService: platform did not return a timezone, using default tz.local=${tz.local.name}');
+        print(
+          'NotificationService: platform did not return a timezone, using default tz.local=${tz.local.name}',
+        );
       }
     } catch (e) {
       // ignore: avoid_print
-      print('NotificationService: failed to set local timezone via platform channel: $e');
+      print(
+        'NotificationService: failed to set local timezone via platform channel: $e',
+      );
     }
 
-    const androidSettings =
-        fln.AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = fln.AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = fln.DarwinInitializationSettings();
     const initSettings = fln.InitializationSettings(
       android: androidSettings,
@@ -57,30 +70,42 @@ class NotificationService {
     );
 
     await _plugin.initialize(initSettings);
-    await _plugin.resolvePlatformSpecificImplementation<
-            fln.AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const fln.AndroidNotificationChannel(
-      'bloop_tasks',
-      'Task Reminders',
-      description: 'Reminders for tasks',
-      importance: fln.Importance.high,
-    ));
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+          fln.AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const fln.AndroidNotificationChannel(
+            'bloop_tasks',
+            'Task Reminders',
+            description: 'Reminders for tasks',
+            importance: fln.Importance.high,
+          ),
+        );
   }
 
   Future<List<int>?> scheduleReminders(Task task) async {
     // On Android we must ensure the app is allowed to schedule exact alarms
     if (Platform.isAndroid) {
       try {
-        final can = await _methodChannel.invokeMethod<bool>('canScheduleExactAlarm');
+        final can = await _methodChannel.invokeMethod<bool>(
+          'canScheduleExactAlarm',
+        );
         final canScheduleExact = (can == null) ? false : can;
 
         // Ensure notification permission is granted (Android 13+)
-        final hasNotif = await _methodChannel.invokeMethod<bool>('hasNotificationPermission');
+        final hasNotif = await _methodChannel.invokeMethod<bool>(
+          'hasNotificationPermission',
+        );
         if (hasNotif == null || hasNotif == false) {
-          final granted = await _methodChannel.invokeMethod<bool>('requestNotificationPermission');
+          final granted = await _methodChannel.invokeMethod<bool>(
+            'requestNotificationPermission',
+          );
           if (granted == null || granted == false) {
             // ignore: avoid_print
-            print('NotificationService: notification permission denied, returning null');
+            print(
+              'NotificationService: notification permission denied, returning null',
+            );
             // Open notification settings as fallback
             await _methodChannel.invokeMethod('openNotificationSettings');
             return null;
@@ -94,7 +119,9 @@ class NotificationService {
         if (!canScheduleExact) {
           // Log to help debugging on-device
           // ignore: avoid_print
-          print('NotificationService: exact alarms not available, falling back to allowWhileIdle');
+          print(
+            'NotificationService: exact alarms not available, falling back to allowWhileIdle',
+          );
         }
       } catch (_) {
         // If platform channel fails, fall back to attempting to schedule.
@@ -131,7 +158,9 @@ class NotificationService {
     // otherwise fall back to exactAllowWhileIdle for a best-effort delivery.
     fln.AndroidScheduleMode scheduleMode = fln.AndroidScheduleMode.alarmClock;
     try {
-      final can = await _methodChannel.invokeMethod<bool>('canScheduleExactAlarm');
+      final can = await _methodChannel.invokeMethod<bool>(
+        'canScheduleExactAlarm',
+      );
       if (can == null || can == false) {
         scheduleMode = fln.AndroidScheduleMode.exactAllowWhileIdle;
       }
@@ -146,12 +175,16 @@ class NotificationService {
       ids.add(id);
       // Log computed times for debugging
       // ignore: avoid_print
-      print('NotificationService: now=${now.toIso8601String()} scheduledRaw=${scheduled.toIso8601String()} scheduledIsUtc=${scheduled.isUtc} tz.local=${tz.local.name}');
+      print(
+        'NotificationService: now=${now.toIso8601String()} scheduledRaw=${scheduled.toIso8601String()} scheduledIsUtc=${scheduled.isUtc} tz.local=${tz.local.name}',
+      );
       final tzDateTime = tz.TZDateTime.from(scheduled, tz.local);
 
       // Debug log
       // ignore: avoid_print
-      print('NotificationService: scheduling id=$id at $tzDateTime using mode=$scheduleMode');
+      print(
+        'NotificationService: scheduling id=$id at $tzDateTime using mode=$scheduleMode',
+      );
 
       await _plugin.zonedSchedule(
         id,
@@ -179,7 +212,9 @@ class NotificationService {
     try {
       final pending = await _plugin.pendingNotificationRequests();
       // ignore: avoid_print
-      print('NotificationService: pending requests=${pending.map((p) => '${p.id}:${p.title}').join(', ')}');
+      print(
+        'NotificationService: pending requests=${pending.map((p) => '${p.id}:${p.title}').join(', ')}',
+      );
     } catch (e) {
       // ignore: avoid_print
       print('NotificationService: failed to list pending requests: $e');
@@ -223,14 +258,18 @@ class NotificationService {
   Future<void> showTestNotification() async {
     try {
       // Ensure channel exists with expected importance before showing.
-      await _plugin.resolvePlatformSpecificImplementation<
-              fln.AndroidFlutterLocalNotificationsPlugin>()
-          ?.createNotificationChannel(const fln.AndroidNotificationChannel(
-        'bloop_tasks',
-        'Task Reminders',
-        description: 'Reminders for tasks',
-        importance: fln.Importance.high,
-      ));
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            fln.AndroidFlutterLocalNotificationsPlugin
+          >()
+          ?.createNotificationChannel(
+            const fln.AndroidNotificationChannel(
+              'bloop_tasks',
+              'Task Reminders',
+              description: 'Reminders for tasks',
+              importance: fln.Importance.high,
+            ),
+          );
 
       // ignore: avoid_print
       print('NotificationService: ensured channel "bloop_tasks" exists');
@@ -258,7 +297,9 @@ class NotificationService {
     }
   }
 
-  static const MethodChannel _methodChannel = MethodChannel('bloop/permissions');
+  static const MethodChannel _methodChannel = MethodChannel(
+    'bloop/permissions',
+  );
 
   Future<bool?> checkExactAlarmAllowed() async {
     if (!Platform.isAndroid) return true;
@@ -281,7 +322,9 @@ class NotificationService {
   Future<bool?> hasNotificationPermission() async {
     if (!Platform.isAndroid) return true;
     try {
-      return await _methodChannel.invokeMethod<bool>('hasNotificationPermission');
+      return await _methodChannel.invokeMethod<bool>(
+        'hasNotificationPermission',
+      );
     } catch (_) {
       return null;
     }
@@ -290,7 +333,9 @@ class NotificationService {
   Future<bool?> requestNotificationPermission() async {
     if (!Platform.isAndroid) return true;
     try {
-      return await _methodChannel.invokeMethod<bool>('requestNotificationPermission');
+      return await _methodChannel.invokeMethod<bool>(
+        'requestNotificationPermission',
+      );
     } catch (_) {
       return null;
     }
@@ -299,7 +344,9 @@ class NotificationService {
   Future<bool?> openNotificationSettings() async {
     if (!Platform.isAndroid) return true;
     try {
-      return await _methodChannel.invokeMethod<bool>('openNotificationSettings');
+      return await _methodChannel.invokeMethod<bool>(
+        'openNotificationSettings',
+      );
     } catch (_) {
       return null;
     }

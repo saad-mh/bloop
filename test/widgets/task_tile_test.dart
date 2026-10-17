@@ -317,14 +317,14 @@ void main() {
       await pumpThemed(tester, expandable(expanded: false));
       expect(
         tester.getSemantics(find.text('Budget')),
-        containsSemantics(hasExpandedState: true, isExpanded: false),
+        isSemantics(hasExpandedState: true, isExpanded: false),
       );
 
       await pumpThemed(tester, expandable(expanded: true));
       await tester.pumpAndSettle();
       expect(
         tester.getSemantics(find.text('Budget')),
-        containsSemantics(hasExpandedState: true, isExpanded: true),
+        isSemantics(hasExpandedState: true, isExpanded: true),
       );
       handle.dispose();
     });
