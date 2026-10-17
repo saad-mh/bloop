@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 import 'package:intl/intl.dart';
 
 import '../../models/task.dart';
@@ -45,6 +46,7 @@ class _TaskTileState extends State<TaskTile> {
   static const _iconSize = 18.0;
 
   bool _isCompleting = false;
+  bool _dismissed = false;
   Offset _slideOffset = Offset.zero;
   Timer? _ticker;
 
@@ -73,6 +75,9 @@ class _TaskTileState extends State<TaskTile> {
     final task = widget.task;
     if (task.dueDateTime == null || task.isCompleted || task.allDay) return;
     final now = widget.now();
+    // Only today's rows can enter or leave NOW / soon on the minute; the
+    // parent regroups at midnight.
+    if (!isSameDay(task.dueDateTime!.toLocal(), now.toLocal())) return;
     final nextMinute = DateTime(
       now.year,
       now.month,
@@ -240,19 +245,33 @@ class _TaskTileState extends State<TaskTile> {
       ),
     );
 
+    if (_dismissed) return const SizedBox.shrink();
+
     final swipeable = widget.onDelete == null
         ? row
         : Dismissible(
             key: ValueKey('dismiss-${task.id}'),
             direction: DismissDirection.endToStart,
-            onDismissed: (_) => widget.onDelete?.call(),
+            onDismissed: (_) {
+              // A dismissed Dismissible must leave the tree at once, but the
+              // delete is async and the list reloads after it.
+              setState(() => _dismissed = true);
+              widget.onDelete?.call();
+            },
             background: Container(
               color: tokens.error,
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: BloopSpace.x6),
               child: Icon(Icons.delete_outline, color: tokens.onError),
             ),
-            child: row,
+            // Swipe is the only delete gesture; give screen readers an action.
+            child: Semantics(
+              customSemanticsActions: {
+                const CustomSemanticsAction(label: 'Delete task'):
+                    widget.onDelete!,
+              },
+              child: row,
+            ),
           );
 
     return AnimatedSlide(
