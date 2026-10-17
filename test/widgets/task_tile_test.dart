@@ -1,4 +1,5 @@
 import 'package:bloop/models/task.dart';
+import 'package:bloop/models/recurrence.dart';
 import 'package:bloop/ui/widgets/task_tile.dart';
 import 'package:bloop/utils/date_utils.dart';
 import 'package:flutter/material.dart';
@@ -327,6 +328,58 @@ void main() {
         isSemantics(hasExpandedState: true, isExpanded: true),
       );
       handle.dispose();
+    });
+
+    testWidgets('swiping across the actions does not delete', (tester) async {
+      var deleted = 0;
+      await pumpThemed(
+        tester,
+        TaskTile(
+          task: Task(title: 'a'),
+          now: clock,
+          expanded: true,
+          onDelete: () => deleted++,
+          actions: const SizedBox(height: 60, child: Center(child: Text('x'))),
+        ),
+      );
+
+      await tester.drag(find.text('x'), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(deleted, 0);
+
+      await tester.drag(find.text('a'), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(deleted, 1, reason: 'the row itself still swipes away');
+    });
+
+    testWidgets('a repeating task reappears once moved to its next date', (
+      tester,
+    ) async {
+      final today = Task(
+        title: 'Water plants',
+        recurrence: Recurrence.daily,
+        dueDateTime: DateTime(2026, 10, 17, 18),
+      );
+      Widget tile(Task task) => TaskTile(
+        task: task,
+        now: clock,
+        animateOnComplete: true,
+        onToggleComplete: (_) {},
+      );
+      double opacity() =>
+          tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
+
+      await pumpThemed(tester, tile(today));
+      await tester.tap(find.byType(InkResponse));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(opacity(), 0);
+
+      // The same task, id and all, comes back with tomorrow's date.
+      await pumpThemed(
+        tester,
+        tile(today.copyWith(dueDateTime: DateTime(2026, 10, 18, 18))),
+      );
+      expect(opacity(), 1);
     });
 
     testWidgets('swiping left deletes', (tester) async {

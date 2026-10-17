@@ -79,7 +79,6 @@ class FocusController extends ChangeNotifier {
   static const String _sceneryEnabledKey = 'focus.ui.sceneryEnabled';
   static const String _selectedSoundKey = 'focus.ui.selectedSound';
   static const String _selectedSceneryKey = 'focus.ui.selectedScenery';
-  static const String _taskIdKey = 'focus.session.taskId';
   static const String _taskTitleKey = 'focus.session.taskTitle';
 
   final Ref _ref;
@@ -100,8 +99,7 @@ class FocusController extends ChangeNotifier {
   DateTime? _sessionStartUtc;
   int _plannedDurationSeconds = const Duration(minutes: 25).inSeconds;
 
-  /// Task the session was started from, if any.
-  String? _taskId;
+  /// Title of the task the session was started from, if any.
   String? _taskTitle;
 
   Duration _remaining = const Duration(minutes: 25);
@@ -142,7 +140,6 @@ class FocusController extends ChangeNotifier {
   String get selectedSound => _selectedSound;
   String get selectedScenery => _selectedScenery;
   bool get isFocusSession => _sessionType == _SessionType.focus;
-  String? get taskId => _taskId;
   String? get taskTitle => _taskTitle;
 
   bool get isFullScreenActive => _isSessionActive && _fullScreenEnabled;
@@ -191,9 +188,14 @@ class FocusController extends ChangeNotifier {
   }
 
   /// Starts a fresh focus session for [task], replacing any in progress.
+  ///
+  /// Time already focused in a running session is kept in the total. The
+  /// foreground service is left up when there is one: stopping it and
+  /// starting it again straight away races, and can leave the new session
+  /// without it.
   void startForTask(Task task) {
-    reset();
-    _taskId = task.id;
+    if (_isRunning) _accumulateFocusTime();
+    _resetSession(stopService: false);
     _taskTitle = task.title;
     start();
   }
@@ -216,11 +218,17 @@ class FocusController extends ChangeNotifier {
     _syncAudioForState();
   }
 
-  void reset() {
+  void reset() => _resetSession(stopService: true);
+
+  void _resetSession({required bool stopService}) {
     _stopUiTimer();
-    _stopFocusNotificationUpdates();
+    if (stopService) {
+      _stopFocusNotificationUpdates();
+    } else {
+      _notificationTimer?.cancel();
+      _notificationTimer = null;
+    }
     _cancelNotification();
-    _taskId = null;
     _taskTitle = null;
     _sessionType = _SessionType.focus;
     _sessionIndex = 1;
@@ -264,7 +272,6 @@ class FocusController extends ChangeNotifier {
     _longBreakDuration = Duration(minutes: longMinutes.clamp(1, 120));
     _totalSessions = totalSessions.clamp(1, 12);
     _autoStartNext = autoStartNext;
-    _taskId = null;
     _taskTitle = null;
     _sessionType = _SessionType.focus;
     _sessionIndex = 1;
@@ -354,9 +361,7 @@ class FocusController extends ChangeNotifier {
   void _advanceSession() {
     if (_sessionType == _SessionType.focus) {
       final isLastFocus = _sessionIndex >= _totalSessions;
-      _sessionType = isLastFocus
-          ? _SessionType.longBreak
-          : _SessionType.shortBreak;
+      _sessionType = isLastFocus ? _SessionType.longBreak : _SessionType.shortBreak;
       return;
     }
     if (_sessionType == _SessionType.shortBreak) {
@@ -506,9 +511,7 @@ class FocusController extends ChangeNotifier {
   }
 
   Future<void> _cancelFocusSessionNotification() async {
-    await _notifService.cancelNotification(
-      FocusSessionPrefs.focusNotificationId,
-    );
+    await _notifService.cancelNotification(FocusSessionPrefs.focusNotificationId);
   }
 
   Future<void> _persistState() async {
@@ -519,15 +522,11 @@ class FocusController extends ChangeNotifier {
         FocusSessionPrefs.sessionStartKey,
         (_sessionStartUtc ?? DateTime.now().toUtc()).millisecondsSinceEpoch,
       );
-      await box.put(
-        FocusSessionPrefs.plannedDurationKey,
-        _plannedDurationSeconds,
-      );
+      await box.put(FocusSessionPrefs.plannedDurationKey, _plannedDurationSeconds);
       await box.put(FocusSessionPrefs.sessionIndexKey, _sessionIndex);
       await box.put(_totalSessionsKey, _totalSessions);
       await box.put(FocusSessionPrefs.isRunningKey, _isRunning);
       await box.put(FocusSessionPrefs.isActiveKey, _isSessionActive);
-      await box.put(_taskIdKey, _taskId);
       await box.put(_taskTitleKey, _taskTitle);
       await FocusSessionPrefs.writeSession(
         sessionType: _sessionType.name,
@@ -561,13 +560,11 @@ class FocusController extends ChangeNotifier {
       final box = Hive.box(StorageService.settingsBoxName);
       final storedType = box.get(FocusSessionPrefs.sessionTypeKey) as String?;
       final storedStart = box.get(FocusSessionPrefs.sessionStartKey) as int?;
-      final storedPlanned =
-          box.get(FocusSessionPrefs.plannedDurationKey) as int?;
+      final storedPlanned = box.get(FocusSessionPrefs.plannedDurationKey) as int?;
       final storedIndex = box.get(FocusSessionPrefs.sessionIndexKey) as int?;
       final storedTotal = box.get(_totalSessionsKey) as int?;
       final storedRunning = box.get(FocusSessionPrefs.isRunningKey) as bool?;
       final storedActive = box.get(FocusSessionPrefs.isActiveKey) as bool?;
-      final storedTaskId = box.get(_taskIdKey) as String?;
       final storedTaskTitle = box.get(_taskTitleKey) as String?;
       final storedDim = box.get(_dimScreenEnabledKey) as bool?;
       final storedSounds = box.get(_soundsEnabledKey) as bool?;
@@ -587,13 +584,11 @@ class FocusController extends ChangeNotifier {
           isUtc: true,
         );
       }
-      _plannedDurationSeconds =
-          storedPlanned ?? _currentSessionDuration().inSeconds;
+      _plannedDurationSeconds = storedPlanned ?? _currentSessionDuration().inSeconds;
       _sessionIndex = storedIndex ?? _sessionIndex;
       _totalSessions = storedTotal ?? _totalSessions;
       _isRunning = storedRunning ?? false;
       _isSessionActive = storedActive ?? _isRunning;
-      _taskId = storedTaskId;
       _taskTitle = storedTaskTitle;
       _dimScreenEnabled = storedDim ?? _dimScreenEnabled;
       _soundsEnabled = storedSounds ?? _soundsEnabled;
@@ -633,15 +628,12 @@ class FocusController extends ChangeNotifier {
   }
 
   void _syncAudioForState({bool restart = false}) {
-    if (!_soundsEnabled ||
-        !_isSessionActive ||
-        _sessionType != _SessionType.focus) {
+    if (!_soundsEnabled || !_isSessionActive || _sessionType != _SessionType.focus) {
       unawaited(_audioEngine.stop());
       return;
     }
     if (_isRunning) {
-      final asset =
-          focusSoundAssets[_selectedSound] ??
+      final asset = focusSoundAssets[_selectedSound] ??
           (focusSoundAssets.isNotEmpty ? focusSoundAssets.values.first : '');
       if (asset.isEmpty) {
         unawaited(_audioEngine.stop());
@@ -761,4 +753,8 @@ class _FocusAudioEngine {
   }
 }
 
-enum _SessionType { focus, shortBreak, longBreak }
+enum _SessionType {
+  focus,
+  shortBreak,
+  longBreak,
+}

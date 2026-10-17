@@ -50,9 +50,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
   TimeOfDay _defaultTimeOfDay() {
     final settings = ref.read(settingsProvider);
-    final now = DateTime.now().add(
-      Duration(minutes: settings.defaultTaskTimeOffsetMinutes),
-    );
+    final now = DateTime.now()
+        .add(Duration(minutes: settings.defaultTaskTimeOffsetMinutes));
     return TimeOfDay.fromDateTime(now);
   }
 
@@ -93,7 +92,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final initial = _dueDateTime != null
         ? TimeOfDay.fromDateTime(_dueDateTime!)
         : _defaultTimeOfDay();
-    final time = await showTimePicker(context: context, initialTime: initial);
+    final time = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
     if (time == null) return;
     if (!mounted) return;
     setState(() {
@@ -112,28 +114,24 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Future<void> _save() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Title is required'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Title is required'), behavior: SnackBarBehavior.floating,));
       return;
     }
     final settings = ref.read(settingsProvider);
     final hasDueTime = _dueDateTime != null && !_allDay;
     final maxReminders = hasDueTime ? 2 : 3;
     final defaultReminder = settings.defaultReminderMinutes > 0
-        ? Duration(minutes: settings.defaultReminderMinutes)
-        : null;
+      ? Duration(minutes: settings.defaultReminderMinutes)
+      : null;
     // Only use the default reminder when a due date is set. This allows
     // creating tasks with no due date even if the user has a default
     // reminder configured in settings.
     final selectedReminders = _reminders.isNotEmpty
-        ? List<Duration>.from(_reminders)
-        : ((_dueDateTime != null && defaultReminder != null)
-              ? [defaultReminder]
-              : <Duration>[]);
+      ? List<Duration>.from(_reminders)
+      : ((_dueDateTime != null && defaultReminder != null)
+        ? [defaultReminder]
+        : <Duration>[]);
     final uniqueReminders = <int>{};
     final reminders = <Duration>[];
     for (final r in selectedReminders) {
@@ -145,10 +143,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
 
     if (_dueDateTime == null && reminders.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pick a due date to schedule reminders.'),
-          behavior: SnackBarBehavior.floating,
-        ),
+        const SnackBar(content: Text('Pick a due date to schedule reminders.'), behavior: SnackBarBehavior.floating,),
       );
       return;
     }
@@ -180,12 +175,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
       if (!hasFutureTime) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'All notifications are in the past. Please choose a future time.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
+          const SnackBar(content: Text('All notifications are in the past. Please choose a future time.'), behavior: SnackBarBehavior.floating,),
         );
         return;
       }
@@ -216,10 +206,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final dateText = _dueDateTime == null
-        ? 'No date chosen'
+      ? 'No date chosen'
         : formatDueDate(_dueDateTime, allDay: true);
     final timeText = _dueDateTime == null
-        ? 'No time chosen'
+      ? 'No time chosen'
         : (_allDay ? 'All day' : formatShortTime(_dueDateTime!));
     final reminderOptions = <Duration>[
       const Duration(minutes: 5),
@@ -233,11 +223,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     final shownReminderCount = _reminders.isEmpty
         ? 1
         : (_reminders.length >= maxReminders
-              ? maxReminders
-              : _reminders.length + 1);
+            ? maxReminders
+            : _reminders.length + 1);
 
     final inputDecoration = InputDecoration(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: colorScheme.outlineVariant),
@@ -250,7 +242,12 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.task == null ? 'Add Task' : 'Edit Task'),
-        actions: [TextButton(onPressed: _save, child: const Text('Save Task'))],
+        actions: [
+          TextButton(
+            onPressed: _save,
+            child: const Text('Save Task'),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -294,10 +291,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Schedule',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Schedule', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -353,12 +347,10 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Type',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text('Type', style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 10),
                     Wrap(
+                      
                       spacing: 8,
                       runSpacing: 8,
                       children: Priority.values.map((priority) {
@@ -366,20 +358,19 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                         return ChoiceChip(
                           label: Text(priority.name),
                           selected: selected,
-                          onSelected: (_) =>
-                              setState(() => _priority = priority),
+                          onSelected: (_) => setState(() => _priority = priority),
                         );
                       }).toList(),
                     ),
-
+                    
                     const SizedBox(height: 14),
                     DropdownButtonFormField<Recurrence>(
                       initialValue: _recurrence,
                       items: Recurrence.values
-                          .map(
-                            (r) =>
-                                DropdownMenuItem(value: r, child: Text(r.name)),
-                          )
+                          .map((r) => DropdownMenuItem(
+                                value: r,
+                                child: Text(r.name),
+                              ))
                           .toList(),
                       onChanged: (r) =>
                           setState(() => _recurrence = r ?? Recurrence.none),
@@ -394,27 +385,21 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                           children: [
                             Expanded(
                               child: DropdownButtonFormField<Duration?>(
-                                value: i < _reminders.length
-                                    ? _reminders[i]
-                                    : null,
+                                value: i < _reminders.length ? _reminders[i] : null,
                                 items: [
                                   const DropdownMenuItem<Duration?>(
                                     value: null,
                                     child: Text('No reminder'),
                                   ),
                                   ...reminderOptions
-                                      .where(
-                                        (option) =>
-                                            !_reminders.contains(option) ||
-                                            (i < _reminders.length &&
-                                                _reminders[i] == option),
-                                      )
-                                      .map(
-                                        (option) => DropdownMenuItem<Duration?>(
-                                          value: option,
-                                          child: Text(_formatReminder(option)),
-                                        ),
-                                      ),
+                                      .where((option) =>
+                                          !_reminders.contains(option) ||
+                                          (i < _reminders.length &&
+                                              _reminders[i] == option))
+                                      .map((option) => DropdownMenuItem<Duration?>(
+                                            value: option,
+                                            child: Text(_formatReminder(option)),
+                                          )),
                                 ],
                                 onChanged: (value) {
                                   setState(() {
@@ -426,16 +411,13 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                                     }
                                     if (i < _reminders.length) {
                                       _reminders[i] = value;
-                                    } else if (_reminders.length <
-                                        maxReminders) {
+                                    } else if (_reminders.length < maxReminders) {
                                       _reminders.add(value);
                                     }
                                   });
                                 },
                                 decoration: inputDecoration.copyWith(
-                                  labelText: i == 0
-                                      ? 'Reminder'
-                                      : 'Reminder ${i + 1}',
+                                  labelText: i == 0 ? 'Reminder' : 'Reminder ${i + 1}',
                                 ),
                                 icon: const Icon(Icons.expand_more),
                               ),
@@ -495,10 +477,8 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                                   child: const Text('Cancel'),
                                 ),
                                 FilledButton(
-                                  onPressed: () => Navigator.pop(
-                                    context,
-                                    controller.text.trim(),
-                                  ),
+                                  onPressed: () =>
+                                      Navigator.pop(context, controller.text.trim()),
                                   child: const Text('Add'),
                                 ),
                               ],

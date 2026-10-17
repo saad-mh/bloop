@@ -5,7 +5,10 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 
-enum FocusSessionAction { toggle, skip }
+enum FocusSessionAction {
+  toggle,
+  skip,
+}
 
 class NotifService {
   final notifPlugin = FlutterLocalNotificationsPlugin();
@@ -28,34 +31,26 @@ class NotifService {
   Stream<FocusSessionAction> get focusSessionActions =>
       _focusActionController.stream;
 
-  // Init
+// Init
   Future<void> initNotification() async {
     if (_isInitialized) return;
 
     // timezone handling
     tz.initializeTimeZones();
     final rawTimeZone = await FlutterTimezone.getLocalTimezone();
-    final tzString =
-        RegExp(
-          r'([A-Za-z_]+\/[A-Za-z_]+)',
-        ).firstMatch(rawTimeZone.toString())?.group(0) ??
-        'UTC';
+    final tzString = RegExp(r'([A-Za-z_]+\/[A-Za-z_]+)').firstMatch(rawTimeZone.toString())?.group(0) ?? 'UTC';
 
     try {
       tz.setLocalLocation(tz.getLocation(tzString));
     } catch (e) {
       // ignore: avoid_print
-      print(
-        'NotifService: tz.getLocation failed for "$tzString": $e — falling back to UTC',
-      );
+      print('NotifService: tz.getLocation failed for "$tzString": $e — falling back to UTC');
       tz.setLocalLocation(tz.getLocation('UTC'));
     }
 
     // prep Android settings
-    const initSettingsAndroid = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
-
+    const initSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    
     // prep iOS settings
     const initSettingsiOS = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -77,53 +72,52 @@ class NotifService {
     // Use the same plugin instance to create the channel so platform
     // implementation sees the channel metadata we expect.
     await notifPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            "task_reminder_b",
-            "Task Reminder B",
-            description: "Reminder notifications for tasks v2",
-            importance: Importance.max,
-          ),
-        );
+      const AndroidNotificationChannel(
+        "task_reminder_b",
+        "Task Reminder B",
+        description: "Reminder notifications for tasks v2",
+        importance: Importance.max,
+      ),
+    );
     await notifPlugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            focusSessionChannelId,
-            focusSessionChannelName,
-            description: focusSessionChannelDescription,
-            importance: Importance.low,
-          ),
-        );
+      const AndroidNotificationChannel(
+        focusSessionChannelId,
+        focusSessionChannelName,
+        description: focusSessionChannelDescription,
+        importance: Importance.low,
+      ),
+    );
     _isInitialized = true;
   }
 
   NotificationDetails notificationDetails() {
     return const NotificationDetails(
       android: AndroidNotificationDetails(
-        "task_reminder_b",
+        "task_reminder_b", 
         "Task Reminder B",
         channelDescription: "Reminder notifications for tasks v2",
         importance: Importance.max,
         priority: Priority.high,
       ),
-      iOS: DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(
+
+      )
     );
   }
 
-  Future<void> showNotification({
-    int id = 0,
-    String? title,
-    String? body,
-  }) async {
+  Future<void> showNotification({int id = 0, String? title, String? body}) async {
     // Ensure notification details are provided (avoids plugin NPE when Android
     // specifics are missing). Use our configured channel/details helper.
-    await notifPlugin.show(id, title, body, notificationDetails());
+    await notifPlugin.show(
+      id,
+      title,
+      body,
+      notificationDetails(),
+    );
   }
 
   /*
@@ -143,21 +137,19 @@ class NotifService {
     int? day,
     int? month,
     int? year,
-  }) async {
+  }) async{
     final now = tz.TZDateTime.now(tz.local);
     // var scheduledDate = tz.TZDateTime(
-    //   tz.local,
+    //   tz.local, 
     //   year ?? now.year,
-    //   month ?? now.month,
-    //   day ?? now.day,
-    //   hour,
+    //   month ?? now.month, 
+    //   day ?? now.day, 
+    //   hour, 
     //   minute,
     //   );
 
-    var scheduledDate = tz.TZDateTime.now(
-      tz.local,
-    ).add(const Duration(seconds: 3));
-
+    var scheduledDate = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 3));
+    
     final tz.TZDateTime scheduledFor = scheduledDate.isBefore(now)
         ? scheduledDate.add(const Duration(days: 1))
         : scheduledDate;
@@ -180,18 +172,14 @@ class NotifService {
       try {
         final pending = await notifPlugin.pendingNotificationRequests();
         // ignore: avoid_print
-        print(
-          'NotifService: pending requests=${pending.map((p) => '${p.id}:${p.title}').join(', ')}',
-        );
+        print('NotifService: pending requests=${pending.map((p) => '${p.id}:${p.title}').join(', ')}');
       } catch (e) {
         // ignore: avoid_print
         print('NotifService: failed to list pending requests: $e');
       }
 
       // ignore: avoid_print
-      print(
-        'NotifService: scheduled notification id=$id for $scheduledFor (now: $now)',
-      );
+      print('NotifService: scheduled notification id=$id for $scheduledFor (now: $now)');
     } catch (e, st) {
       // ignore: avoid_print
       print('NotifService: failed to schedule notification: $e\n$st');
@@ -303,6 +291,7 @@ class NotifService {
       return;
     }
   }
+
 }
 
 @pragma('vm:entry-point')

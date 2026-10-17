@@ -147,9 +147,7 @@ class SettingsScreen extends ConsumerWidget {
                 SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   title: const Text('Allow overrides during focus'),
-                  subtitle: const Text(
-                    'Let the focus session sheet adjust these settings',
-                  ),
+                  subtitle: const Text('Let the focus session sheet adjust these settings'),
                   value: settings.focusAllowOverrides,
                   onChanged: controller.setFocusAllowOverrides,
                 ),
@@ -189,9 +187,8 @@ class SettingsScreen extends ConsumerWidget {
                             onPressed: () => Navigator.pop(context, true),
                             style: ButtonStyle(
                               elevation: WidgetStateProperty.all(5),
-                              foregroundColor: WidgetStateProperty.all(
-                                colorScheme.error,
-                              ),
+                              foregroundColor:
+                                  WidgetStateProperty.all(colorScheme.error),
                             ),
                             child: const Text('Reset'),
                           ),
@@ -235,9 +232,8 @@ class SettingsScreen extends ConsumerWidget {
                   value: settings.focusSessionNotificationsEnabled,
                   onChanged: controller.setFocusSessionNotificationsEnabled,
                   title: const Text('Focus session notification'),
-                  subtitle: const Text(
-                    'Show a persistent timer while focusing',
-                  ),
+                  subtitle:
+                      const Text('Show a persistent timer while focusing'),
                 ),
               ],
             ),
@@ -257,9 +253,8 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 ListTile(
                   title: const Text('Default reminder'),
-                  subtitle: Text(
-                    '${settings.defaultReminderMinutes} minutes before',
-                  ),
+                  subtitle:
+                      Text('${settings.defaultReminderMinutes} minutes before'),
                   onTap: () async {
                     final textController = TextEditingController(
                       text: settings.defaultReminderMinutes.toString(),
@@ -306,9 +301,8 @@ class SettingsScreen extends ConsumerWidget {
                     final result = await showDialog<int>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        title: const Text(
-                          'Default task time (minutes from now)',
-                        ),
+                        title:
+                            const Text('Default task time (minutes from now)'),
                         content: TextField(
                           controller: textController,
                           keyboardType: TextInputType.number,
@@ -344,9 +338,7 @@ class SettingsScreen extends ConsumerWidget {
                     final result = await showDialog<Priority>(
                       context: context,
                       builder: (_) => SimpleDialog(
-                        insetPadding: const EdgeInsets.symmetric(
-                          horizontal: 15,
-                        ),
+                        insetPadding: const EdgeInsets.symmetric(horizontal: 15),
                         title: const Text('Default priority'),
                         children: [
                           for (final p in Priority.values)
@@ -380,7 +372,9 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 ListTile(
                   title: const Text('Add demo tasks'),
-                  subtitle: const Text('One of every row state, for testing'),
+                  subtitle: const Text(
+                    'One of every row state, for testing',
+                  ),
                   onTap: () async {
                     await controller.addDemoTasks();
                     if (context.mounted) {
@@ -402,9 +396,8 @@ class SettingsScreen extends ConsumerWidget {
                       context: context,
                       builder: (_) => AlertDialog(
                         title: const Text('Clear all tasks'),
-                        content: const Text(
-                          'This will delete all tasks. Continue?',
-                        ),
+                        content:
+                            const Text('This will delete all tasks. Continue?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -485,10 +478,8 @@ class SettingsScreen extends ConsumerWidget {
                             child: const Text('Cancel'),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.pop(
-                              context,
-                              textController.text.trim(),
-                            ),
+                            onPressed: () =>
+                                Navigator.pop(context, textController.text.trim()),
                             child: const Text('Import'),
                           ),
                         ],
@@ -553,17 +544,11 @@ class _PermissionSettingsScreenState
       return const SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          semanticsLabel: 'Loading',
-          year2023: false,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, semanticsLabel: 'Loading', year2023: false,),
       );
     }
     return Icon(
-      granted
-          ? CupertinoIcons.checkmark_seal_fill
-          : CupertinoIcons.exclamationmark_triangle,
+      granted ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.exclamationmark_triangle,
       color: granted
           ? BloopTokens.of(context).ink
           : BloopTokens.of(context).muted,
@@ -576,7 +561,9 @@ class _PermissionSettingsScreenState
     final status = ref.watch(permissionStatusProvider);
     final controller = ref.read(permissionStatusProvider.notifier);
     return Scaffold(
-      appBar: AppBar(title: const Text('Required permissions')),
+      appBar: AppBar(
+        title: const Text('Required permissions'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -632,9 +619,10 @@ class _PermissionSettingsScreenState
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 'Permissions are managed by the system on this platform.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ),
         ],
