@@ -41,9 +41,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _PromptDialog(
-        title: 'Your name',
+        title: 'What would you like to be called?',
         label: 'Name',
-        helper: 'Leave empty to be greeted as "User".',
+        helper: '',
         initial: current,
         maxLength: 30,
         capitalization: TextCapitalization.words,
