@@ -14,12 +14,12 @@ String greetingFor(DateTime now, {String? name}) {
   } else {
     part = 'night';
   }
-  final first = firstName(name);
+  final first = _firstName(name);
   return first == null ? 'Good $part' : 'Good $part, $first';
 }
 
 /// First word of [name], or null when it is missing or blank.
-String? firstName(String? name) {
+String? _firstName(String? name) {
   final trimmed = name?.trim() ?? '';
   if (trimmed.isEmpty) return null;
   return trimmed.split(RegExp(r'\s+')).first;

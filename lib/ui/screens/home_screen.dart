@@ -136,10 +136,7 @@ class HomeScreen extends ConsumerWidget {
 
     final selectedTask = await showSearch<Task?>(
       context: context,
-      delegate: TaskSearchDelegate(
-        tasks: [...active.requireValue, ...completed.requireValue],
-        ref: ref,
-      ),
+      delegate: TaskSearchDelegate(ref: ref),
     );
 
     if (selectedTask != null && context.mounted) {
@@ -160,6 +157,16 @@ class _TagFilterRow extends ConsumerWidget {
     final tags = ref.watch(tagsProvider).valueOrNull ?? const <String>[];
     final selected = ref.watch(effectiveTagProvider);
     final notifier = ref.read(selectedTagProvider.notifier);
+
+    // Drop the stored choice once its tag is renamed or deleted, so creating
+    // a tag with the old name later doesn't silently re-apply the filter.
+    ref.listen(tagsProvider, (_, next) {
+      final tags = next.valueOrNull;
+      final chosen = ref.read(selectedTagProvider);
+      if (tags != null && chosen != null && !tags.contains(chosen)) {
+        notifier.state = null;
+      }
+    });
 
     return SizedBox(
       height: kBloopMinTouchTarget,
@@ -190,9 +197,8 @@ class _TagFilterRow extends ConsumerWidget {
 }
 
 class TaskSearchDelegate extends SearchDelegate<Task?> {
-  TaskSearchDelegate({required this.tasks, required this.ref});
+  TaskSearchDelegate({required this.ref});
 
-  final List<Task> tasks;
   final WidgetRef ref;
 
   @override
@@ -222,16 +228,29 @@ class TaskSearchDelegate extends SearchDelegate<Task?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    return _buildTaskList(context, _filterTasks(query));
+    return _buildTaskList(context);
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    return _buildTaskList(context, _filterTasks(query));
+    return _buildTaskList(context);
   }
 
-  List<Task> _filterTasks(String q) {
-    final normalized = q.trim().toLowerCase();
+  /// Every active task, then the completed ones, read live so ticking or
+  /// deleting a result updates the list.
+  Widget _buildTaskList(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final active = ref.watch(activeTasksProvider).valueOrNull ?? const [];
+        final completed =
+            ref.watch(completedTasksProvider).valueOrNull ?? const [];
+        return _buildResults(context, _filterTasks([...active, ...completed]));
+      },
+    );
+  }
+
+  List<Task> _filterTasks(List<Task> tasks) {
+    final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return tasks;
     return tasks.where((task) {
       final title = task.title.toLowerCase();
@@ -243,7 +262,7 @@ class TaskSearchDelegate extends SearchDelegate<Task?> {
     }).toList();
   }
 
-  Widget _buildTaskList(BuildContext context, List<Task> filtered) {
+  Widget _buildResults(BuildContext context, List<Task> filtered) {
     if (filtered.isEmpty) {
       return const Center(child: Text('[?] No such task found'));
     }

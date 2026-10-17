@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:bloop/models/task.dart';
 import 'package:bloop/providers/settings_provider.dart';
+import 'package:bloop/providers/tags_provider.dart';
+import 'package:bloop/providers/task_provider.dart';
 import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/home_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
@@ -11,7 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
-/// Settings with a fixed name that never touch Hive.
+/// Settings with a fixed name, whatever is stored in Hive.
 class _FakeSettings extends SettingsNotifier {
   _FakeSettings(String name) {
     state = state.copyWith(userName: name);
@@ -157,5 +159,37 @@ void main() {
     await tester.enterText(find.byType(TextField), 'essay');
     await tester.pumpAndSettle();
     expect(find.text('Old essay'), findsOneWidget);
+  });
+
+  testWidgets('deleting the selected tag clears the stored choice', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(HomeScreen)),
+    );
+
+    await tester.runAsync(
+      () => container.read(tagsProvider.notifier).addTag('temp'),
+    );
+    await tester.pumpAndSettle();
+    // The wide test font pushes the new chip off the right edge.
+    await tester.scrollUntilVisible(
+      chip('temp'),
+      100,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(chip('temp'));
+    await tester.pumpAndSettle();
+    expect(container.read(selectedTagProvider), 'temp');
+
+    await tester.runAsync(
+      () => container.read(tagsProvider.notifier).deleteTag('temp'),
+    );
+    await tester.pumpAndSettle();
+
+    expect(container.read(selectedTagProvider), isNull);
+    expect(chip('All'), findsOneWidget);
+    expect(find.text('Buy milk'), findsOneWidget);
   });
 }
