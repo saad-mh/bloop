@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/task.dart';
 import '../../utils/date_utils.dart';
+import '../theme/tokens.dart';
 import 'tag_chip.dart';
 
 class TaskTile extends StatefulWidget {
@@ -66,20 +67,13 @@ class _TaskTileState extends State<TaskTile> {
                 59,
               ).isBefore(now)
             : dueDateTime.isBefore(now));
-    const overdueColor = Color(0xFFFF4D2D);
+    final tokens = BloopTokens.of(context);
+    final textTheme = Theme.of(context).textTheme;
     String? dateText;
     String? timeText;
     if (dueDateTime != null) {
       dateText = DateFormat.MMMd().format(dueDateTime); // e.g. "Jan 21"
       timeText = widget.task.allDay ? null : formatShortTime(dueDateTime);
-    }
-
-    final bgColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFF0E1B26)
-        : Theme.of(context).cardColor;
-    int alphaFromOpacity(double opacity) {
-      final normalized = opacity.clamp(0.0, 1.0);
-      return (normalized * 255).round();
     }
 
     return AnimatedSlide(
@@ -95,19 +89,15 @@ class _TaskTileState extends State<TaskTile> {
           child: InkWell(
             onTap: widget.onTap,
             onLongPress: widget.onTap,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(BloopRadii.lg),
             child: IgnorePointer(
               ignoring: _isCompleting,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context)
-                        .dividerColor
-                        .withAlpha(alphaFromOpacity(0.08)),
-                  ),
+                  color: tokens.raised,
+                  borderRadius: BorderRadius.circular(BloopRadii.lg),
+                  border: Border.all(color: tokens.border),
                 ),
                 child: Row(
                   children: [
@@ -124,19 +114,17 @@ class _TaskTileState extends State<TaskTile> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: widget.task.isCompleted
-                                    ? Theme.of(context).colorScheme.secondary
+                                    ? tokens.action
                                     : Colors.transparent,
                                 border: Border.all(
                                   color: widget.task.isCompleted
                                       ? Colors.transparent
-                                      : Theme.of(context)
-                                          .dividerColor
-                                          .withAlpha(alphaFromOpacity(0.6)),
+                                      : tokens.muted,
                                   width: 2,
                                 ),
                               ),
                               child: widget.task.isCompleted
-                                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                                  ? Icon(Icons.check, size: 16, color: tokens.onAction)
                                   : null,
                             ),
                             const SizedBox(width: 12),
@@ -148,20 +136,11 @@ class _TaskTileState extends State<TaskTile> {
                                     widget.task.title,
                                     overflow: TextOverflow.ellipsis,
                                     style: widget.task.isCompleted
-                                        ? const TextStyle(
+                                        ? textTheme.titleMedium?.copyWith(
                                             decoration: TextDecoration.lineThrough,
-                                            color: Colors.grey,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
+                                            color: tokens.muted,
                                           )
-                                        : TextStyle(
-                                            color: Theme.of(context)
-                                                .textTheme
-                                                .titleLarge
-                                                ?.color,
-                                            fontSize: 20,
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                        : textTheme.titleMedium,
                                   ),
                                   const SizedBox(height: 6),
                                   Row(
@@ -176,39 +155,23 @@ class _TaskTileState extends State<TaskTile> {
                                             if (dateText != null)
                                               Text(
                                                 dateText,
-                                                style: TextStyle(
-                                                  color: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyMedium
-                                                      ?.color
-                                                      ?.withAlpha(
-                                                          alphaFromOpacity(0.8)),
-                                                ),
+                                                style: textTheme.bodyMedium
+                                                    ?.copyWith(color: tokens.muted),
                                               ),
                                             if (dateText != null) const SizedBox(width: 8),
                                             if (timeText != null) ...[
                                               Icon(
                                                 Icons.schedule_rounded,
                                                 size: 16,
-                                                color: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.color
-                                                    ?.withAlpha(
-                                                        alphaFromOpacity(0.7)),
+                                                color: tokens.muted,
                                               ),
                                               const SizedBox(width: 6),
                                               Text(
                                                 timeText,
-                                                style: TextStyle(
+                                                style: textTheme.bodyMedium?.copyWith(
                                                   color: isOverdue
-                                                      ? overdueColor
-                                                      : Theme.of(context)
-                                                          .textTheme
-                                                          .bodyMedium
-                                                          ?.color
-                                                          ?.withAlpha(
-                                                              alphaFromOpacity(0.8)),
+                                                      ? tokens.ink
+                                                      : tokens.muted,
                                                   fontWeight:
                                                       isOverdue ? FontWeight.w600 : null,
                                                 ),
@@ -226,14 +189,8 @@ class _TaskTileState extends State<TaskTile> {
                                         widget.task.notes!,
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          color: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.color
-                                              ?.withAlpha(alphaFromOpacity(0.8)),
-                                          fontSize: 13,
-                                        ),
+                                        style: textTheme.bodySmall
+                                            ?.copyWith(color: tokens.muted),
                                       ),
                                     ),
                                 ],
@@ -249,15 +206,14 @@ class _TaskTileState extends State<TaskTile> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: overdueColor,
-                            borderRadius: BorderRadius.circular(12),
+                            color: tokens.action,
+                            borderRadius: BorderRadius.circular(BloopRadii.lg),
                           ),
-                          child: const Text(
+                          child: Text(
                             '!!!',
-                            style: TextStyle(
-                              color: Colors.white,
+                            style: textTheme.labelLarge?.copyWith(
+                              color: tokens.onAction,
                               fontWeight: FontWeight.w800,
-                              fontSize: 14,
                               letterSpacing: 1.0,
                             ),
                           ),
@@ -267,10 +223,7 @@ class _TaskTileState extends State<TaskTile> {
                       IconButton(
                         icon: Icon(
                           Icons.delete_outline,
-                          color: Theme.of(context)
-                              .iconTheme
-                              .color
-                              ?.withAlpha(alphaFromOpacity(0.7)),
+                          color: tokens.muted,
                         ),
                         onPressed: widget.onDelete,
                       ),

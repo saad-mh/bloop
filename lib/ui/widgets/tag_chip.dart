@@ -10,7 +10,7 @@ class TagChip extends StatelessWidget {
     return Chip(
       label: Text(label),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
     );
   }
 }
