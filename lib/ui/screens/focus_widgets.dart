@@ -206,7 +206,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 						AnimatedOpacity(
 							opacity: 0.6,
 							duration: const Duration(milliseconds: 400),
-							child: Container(color: Colors.black),
+							child: Container(color: scheme.scrim),
 						),
 					Padding(
 						padding: EdgeInsets.zero,
@@ -658,7 +658,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 								value: value,
 								strokeWidth: size > 200 ? 12 : 10,
 								color: scheme.primary,
-								backgroundColor: scheme.surfaceVariant,
+								backgroundColor: scheme.surfaceContainerHighest,
 								year2023: false,
 							),
 						),
@@ -708,7 +708,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
 				borderRadius: BorderRadius.circular(12),
 				boxShadow: [
 					BoxShadow(
-						color: scheme.shadow.withOpacity(0.05),
+						color: scheme.shadow.withValues(alpha: 0.05),
 						blurRadius: 8,
 						offset: const Offset(0, 4),
 					),
@@ -961,11 +961,11 @@ class _FocusControlsPanel extends StatelessWidget {
 			child: Container(
 				padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
 				decoration: BoxDecoration(
-					color: scheme.surface.withOpacity(0.9),
+					color: scheme.surface.withValues(alpha: 0.9),
 					borderRadius: BorderRadius.circular(24),
 					boxShadow: [
 						BoxShadow(
-							color: scheme.shadow.withOpacity(0.2),
+							color: scheme.shadow.withValues(alpha: 0.2),
 							blurRadius: 24,
 							offset: const Offset(0, 12),
 						),
@@ -1072,7 +1072,7 @@ class SlideToEndControl extends StatelessWidget {
 				color: scheme.onSurfaceVariant,
 				fontWeight: FontWeight.w600,
 			),
-			outerColor: scheme.surfaceVariant,
+			outerColor: scheme.surfaceContainerHighest,
 			innerColor: scheme.surface,
 			elevation: 0,
 			borderRadius: 999,
@@ -1115,7 +1115,7 @@ class LongSwipeSkipControl extends StatelessWidget {
 				color: scheme.onSurfaceVariant,
 				fontWeight: FontWeight.w600,
 			),
-			outerColor: scheme.surfaceVariant,
+			outerColor: scheme.surfaceContainerHighest,
 			innerColor: scheme.surface,
 			elevation: 0,
 			borderRadius: 999,
@@ -1152,10 +1152,10 @@ class _QuickActionIcon extends StatelessWidget {
 			child: Container(
 				padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
 				decoration: BoxDecoration(
-					color: scheme.surface.withOpacity(0.8),
+					color: scheme.surface.withValues(alpha: 0.8),
 					borderRadius: BorderRadius.circular(999),
 					border: Border.all(
-						color: scheme.outlineVariant.withOpacity(0.6),
+						color: scheme.outlineVariant.withValues(alpha: 0.6),
 					),
 				),
 				child: Row(
@@ -1203,14 +1203,15 @@ class _FocusSceneryBackground extends StatelessWidget {
 					gradient: LinearGradient(
 						begin: Alignment.topLeft,
 						end: Alignment.bottomRight,
-						colors: [scheme.surface, scheme.surfaceVariant],
+						colors: [scheme.surface, scheme.surfaceContainerHighest],
 					),
 				),
 			);
 		}
 		switch (config.type) {
 			case SceneryType.gradient:
-				final colors = config.colors ?? [scheme.surface, scheme.surfaceVariant];
+				final colors =
+						config.colors ?? [scheme.surface, scheme.surfaceContainerHighest];
 				return Container(
 					decoration: BoxDecoration(
 						gradient: LinearGradient(
@@ -1290,7 +1291,7 @@ class FocusedTodayCard extends StatelessWidget {
 				borderRadius: BorderRadius.circular(18),
 				boxShadow: [
 					BoxShadow(
-						color: scheme.shadow.withOpacity(0.06),
+						color: scheme.shadow.withValues(alpha: 0.06),
 						blurRadius: 16,
 						offset: const Offset(0, 6),
 					),
