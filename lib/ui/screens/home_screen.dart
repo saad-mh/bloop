@@ -6,9 +6,11 @@ import '../../models/task.dart';
 import '../../providers/collapsed_sections_provider.dart';
 import '../../providers/day_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/tab_provider.dart';
 import '../../providers/tags_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../utils/greeting.dart';
+import '../../utils/task_reschedule.dart';
 import '../../utils/task_sections.dart';
 import '../theme/tokens.dart';
 import '../widgets/bloop_icon_button.dart';
@@ -16,8 +18,10 @@ import '../widgets/choice_chip.dart';
 import '../widgets/floating_nav.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/section_header.dart';
+import '../widgets/task_action_bar.dart';
 import '../widgets/task_tile.dart';
 import 'completed_screen.dart';
+import 'focus_controller.dart';
 import 'settings_screen.dart';
 import 'task_editor_screen.dart';
 
@@ -174,18 +178,100 @@ class HomeScreen extends ConsumerWidget {
 
 /// Active tasks under collapsible Overdue / Today / Upcoming / Whenever
 /// headers. Empty sections are left out.
-class _SectionedTaskList extends ConsumerWidget {
+///
+/// Tapping a row opens it in place; only one row is open at a time.
+class _SectionedTaskList extends ConsumerStatefulWidget {
   const _SectionedTaskList({required this.tasks});
 
   final List<Task> tasks;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SectionedTaskList> createState() => _SectionedTaskListState();
+}
+
+class _SectionedTaskListState extends ConsumerState<_SectionedTaskList> {
+  /// Id of the open row, if any.
+  String? _expandedId;
+
+  void _toggleExpanded(Task task) =>
+      setState(() => _expandedId = _expandedId == task.id ? null : task.id);
+
+  void _collapse() {
+    if (_expandedId != null) setState(() => _expandedId = null);
+  }
+
+  Future<void> _complete(Task task, bool? checked) async {
+    _collapse();
+    await ref
+        .read(taskListProvider.notifier)
+        .toggleComplete(task, value: checked);
+  }
+
+  Future<void> _delete(Task task) async {
+    _collapse();
+    await ref.read(taskListProvider.notifier).delete(task);
+  }
+
+  Future<void> _edit(Task task) async {
+    _collapse();
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TaskEditorScreen(task: task)));
+  }
+
+  Future<void> _snooze(Task task) async {
+    _collapse();
+    await ref
+        .read(taskListProvider.notifier)
+        .addOrUpdate(snoozed(task, DateTime.now()));
+  }
+
+  Future<void> _moveToTomorrow(Task task) async {
+    _collapse();
+    await ref
+        .read(taskListProvider.notifier)
+        .addOrUpdate(movedToTomorrow(task, DateTime.now()));
+  }
+
+  /// Starts a focus session on [task] and shows the Focus tab. A session in
+  /// progress, running or paused, is only replaced once the user agrees.
+  Future<void> _focus(Task task) async {
+    final focus = ref.read(focusControllerProvider);
+    if (focus.isSessionActive) {
+      final replace = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Replace current session?'),
+          content: Text(
+            'Starting a focus session for "${task.title}" ends the one in '
+            'progress.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep current'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Replace'),
+            ),
+          ],
+        ),
+      );
+      if (replace != true || !mounted) return;
+    }
+    _collapse();
+    focus.startForTask(task);
+    ref.read(selectedTabProvider.notifier).select(focusTabIndex);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final collapsed = ref.watch(collapsedSectionsProvider);
     final now = ref.watch(dayProvider);
 
     final rows = <Object>[];
-    for (final group in groupTasksBySection(tasks, now)) {
+    for (final group in groupTasksBySection(widget.tasks, now)) {
       rows.add(group);
       if (!collapsed.contains(group.section)) rows.addAll(group.tasks);
     }
@@ -219,21 +305,49 @@ class _SectionedTaskList extends ConsumerWidget {
           key: ValueKey(task.id),
           task: task,
           animateOnComplete: true,
-          onToggleComplete: (checked) async {
-            await ref
-                .read(taskListProvider.notifier)
-                .toggleComplete(task, value: checked);
-          },
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => TaskEditorScreen(task: task)),
-            );
-          },
-          onDelete: () async {
-            await ref.read(taskListProvider.notifier).delete(task);
-          },
+          expanded: _expandedId == task.id,
+          actions: _RowActions(
+            onFocus: () => _focus(task),
+            onSnooze: () => _snooze(task),
+            onTomorrow: () => _moveToTomorrow(task),
+            onEdit: () => _edit(task),
+          ),
+          onToggleComplete: (checked) => _complete(task, checked),
+          onTap: () => _toggleExpanded(task),
+          onDelete: () => _delete(task),
         );
       },
+    );
+  }
+}
+
+/// [TaskActionBar] with the focus length read from the session settings. A
+/// widget of its own so the home list only listens to the focus controller
+/// while a row is open.
+class _RowActions extends ConsumerWidget {
+  const _RowActions({
+    required this.onFocus,
+    required this.onSnooze,
+    required this.onTomorrow,
+    required this.onEdit,
+  });
+
+  final VoidCallback onFocus;
+  final VoidCallback onSnooze;
+  final VoidCallback onTomorrow;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final minutes = ref.watch(
+      focusControllerProvider.select((c) => c.focusDuration.inMinutes),
+    );
+    return TaskActionBar(
+      focusMinutes: minutes,
+      onFocus: onFocus,
+      onSnooze: onSnooze,
+      onTomorrow: onTomorrow,
+      onEdit: onEdit,
     );
   }
 }
