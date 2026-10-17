@@ -59,6 +59,13 @@ void main() {
       );
     });
 
+    test('a UTC now is read in local time', () {
+      expect(
+        sectionFor(task('a', due: DateTime(2026, 10, 17, 9)), now.toUtc()),
+        TaskSection.today,
+      );
+    });
+
     test('a UTC due date is read in local time', () {
       final due = DateTime(2026, 10, 17, 9).toUtc();
       expect(sectionFor(task('a', due: due), now), TaskSection.today);

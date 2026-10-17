@@ -27,7 +27,8 @@ TaskSection sectionFor(Task task, DateTime now) {
   final due = task.dueDateTime?.toLocal();
   if (due == null) return TaskSection.whenever;
 
-  final today = DateTime(now.year, now.month, now.day);
+  final localNow = now.toLocal();
+  final today = DateTime(localNow.year, localNow.month, localNow.day);
   final dueDay = DateTime(due.year, due.month, due.day);
   if (dueDay.isBefore(today)) return TaskSection.overdue;
   if (dueDay.isAfter(today)) return TaskSection.upcoming;

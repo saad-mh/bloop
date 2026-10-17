@@ -191,11 +191,13 @@ class _SectionedTaskList extends ConsumerWidget {
                 ? DateFormat.MMMEd().format(now)
                 : null,
             expanded: !collapsed.contains(section),
-            onToggle: () {
-              final next = {...collapsed};
-              if (!next.add(section)) next.remove(section);
-              ref.read(collapsedSectionsProvider.notifier).state = next;
-            },
+            onToggle: () => ref
+                .read(collapsedSectionsProvider.notifier)
+                .update(
+                  (current) => current.contains(section)
+                      ? ({...current}..remove(section))
+                      : {...current, section},
+                ),
           );
         }
         final task = row as Task;

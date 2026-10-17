@@ -42,7 +42,6 @@ void main() {
   });
 
   final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
 
   Task task(String title, {DateTime? due, List<String>? tags}) =>
       Task(title: title, dueDateTime: due, tags: tags);
@@ -66,9 +65,9 @@ void main() {
   }
 
   final mixed = [
-    task('Pay fee', due: today.subtract(const Duration(days: 1))),
-    task('Lab record', due: today.add(const Duration(hours: 18))),
-    task('Plan sprint', due: today.add(const Duration(days: 2))),
+    task('Pay fee', due: DateTime(now.year, now.month, now.day - 1)),
+    task('Lab record', due: DateTime(now.year, now.month, now.day, 23, 59)),
+    task('Plan sprint', due: DateTime(now.year, now.month, now.day + 2)),
     task('Laundry'),
     task('Read papers'),
   ];
@@ -101,7 +100,7 @@ void main() {
 
   testWidgets('hides empty sections', (tester) async {
     await pumpHome(tester, [
-      task('Lab record', due: today.add(const Duration(hours: 18))),
+      task('Lab record', due: DateTime(now.year, now.month, now.day, 23, 59)),
     ]);
 
     expect(header('Today'), findsOneWidget);
