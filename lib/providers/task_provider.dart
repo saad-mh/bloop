@@ -5,6 +5,7 @@ import '../models/recurrence.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/recurrence_service.dart';
+import 'tags_provider.dart';
 
 final taskListProvider =
     StateNotifierProvider<TaskNotifier, AsyncValue<List<Task>>>((ref) {
@@ -16,6 +17,29 @@ final activeTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
   return tasks.whenData(
     (data) => data.where((t) => !t.isCompleted).toList()
       ..sort(_sortByDatePriority),
+  );
+});
+
+/// Tag chosen in the home header, or null for All.
+final selectedTagProvider = StateProvider<String?>((ref) => null);
+
+/// [selectedTagProvider], or null once that tag has been renamed or deleted
+/// so a stale choice can't leave the list filtered by a chip that is gone.
+final effectiveTagProvider = Provider<String?>((ref) {
+  final tag = ref.watch(selectedTagProvider);
+  final tags = ref.watch(tagsProvider).valueOrNull;
+  if (tag == null || tags == null || !tags.contains(tag)) return null;
+  return tag;
+});
+
+/// Active tasks narrowed by [effectiveTagProvider]. Every home section reads
+/// this, so one chip filters them all at once.
+final filteredActiveTasksProvider = Provider<AsyncValue<List<Task>>>((ref) {
+  final tag = ref.watch(effectiveTagProvider);
+  final tasks = ref.watch(activeTasksProvider);
+  if (tag == null) return tasks;
+  return tasks.whenData(
+    (data) => data.where((t) => t.tags.contains(tag)).toList(),
   );
 });
 

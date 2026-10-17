@@ -20,6 +20,7 @@ class SettingsState {
     this.themeMode = ThemeMode.system,
     this.seedColor = 0xFF607D8B, // blueGrey
     this.lastTabIndex = 0,
+    this.userName = '',
   });
 
   final int defaultReminderMinutes;
@@ -34,6 +35,9 @@ class SettingsState {
   final int seedColor;
   final int lastTabIndex;
 
+  /// Shown in the home greeting; empty until set.
+  final String userName;
+
   SettingsState copyWith({
     int? defaultReminderMinutes,
     int? defaultTaskTimeOffsetMinutes,
@@ -46,6 +50,7 @@ class SettingsState {
     ThemeMode? themeMode,
     int? seedColor,
     int? lastTabIndex,
+    String? userName,
   }) {
     return SettingsState(
       defaultReminderMinutes:
@@ -64,6 +69,7 @@ class SettingsState {
       themeMode: themeMode ?? this.themeMode,
       seedColor: seedColor ?? this.seedColor,
       lastTabIndex: lastTabIndex ?? this.lastTabIndex,
+      userName: userName ?? this.userName,
     );
   }
 }
@@ -111,6 +117,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             : state.themeMode,
         seedColor: seed ?? state.seedColor,
         lastTabIndex: box.get(_lastTabKey) as int? ?? state.lastTabIndex,
+        userName: box.get('userName') as String? ?? state.userName,
       );
       SharedPreferences.getInstance().then((prefs) {
         prefs.setBool(
@@ -211,6 +218,15 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     try {
       final box = Hive.box(StorageService.settingsBoxName);
       box.put(_lastTabKey, index);
+    } catch (_) {}
+  }
+
+  void setUserName(String name) {
+    final trimmed = name.trim();
+    state = state.copyWith(userName: trimmed);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('userName', trimmed);
     } catch (_) {}
   }
 
