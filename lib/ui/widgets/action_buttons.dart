@@ -14,7 +14,8 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
 
-  /// Stretch to the full available width.
+  /// Stretch to the full available width. Needs a bounded width, so don't use
+  /// it directly inside a [Row] or a horizontal scroll view.
   final bool expand;
 
   @override
@@ -26,7 +27,7 @@ class PrimaryButton extends StatelessWidget {
             icon: Icon(icon),
             label: Text(label),
           );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
+    return _expanded(button, expand);
   }
 }
 
@@ -45,7 +46,8 @@ class OutlineActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
 
-  /// Stretch to the full available width.
+  /// Stretch to the full available width. Needs a bounded width, so don't use
+  /// it directly inside a [Row] or a horizontal scroll view.
   final bool expand;
 
   @override
@@ -57,6 +59,9 @@ class OutlineActionButton extends StatelessWidget {
             icon: Icon(icon),
             label: Text(label),
           );
-    return expand ? SizedBox(width: double.infinity, child: button) : button;
+    return _expanded(button, expand);
   }
 }
+
+Widget _expanded(Widget button, bool expand) =>
+    expand ? SizedBox(width: double.infinity, child: button) : button;

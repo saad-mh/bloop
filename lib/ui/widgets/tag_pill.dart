@@ -39,34 +39,39 @@ class TagPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(BloopRadii.sm),
         border: Border.all(color: tokens.border),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ExcludeSemantics(
-            child: switch (marker) {
-              TagPillMarker.hash => Text(
-                '#',
-                style: labelStyle?.copyWith(color: tokens.muted),
+      // Only ellipsise when the width is bounded; a Flexible in an unbounded
+      // row (e.g. a horizontal list) would fail to lay out.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final text = Text(
+            label,
+            style: labelStyle,
+            overflow: TextOverflow.ellipsis,
+          );
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: switch (marker) {
+                  TagPillMarker.hash => Text(
+                    '#',
+                    style: labelStyle?.copyWith(color: tokens.muted),
+                  ),
+                  TagPillMarker.dot => Container(
+                    width: _dotSize,
+                    height: _dotSize,
+                    decoration: BoxDecoration(
+                      color: tokens.muted,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                },
               ),
-              TagPillMarker.dot => Container(
-                width: _dotSize,
-                height: _dotSize,
-                decoration: BoxDecoration(
-                  color: tokens.muted,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            },
-          ),
-          const SizedBox(width: BloopSpace.x1),
-          Flexible(
-            child: Text(
-              label,
-              style: labelStyle,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+              const SizedBox(width: BloopSpace.x1),
+              constraints.hasBoundedWidth ? Flexible(child: text) : text,
+            ],
+          );
+        },
       ),
     );
 
@@ -74,7 +79,7 @@ class TagPill extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Tag $label',
+      label: label,
       excludeSemantics: true,
       onTap: onTap,
       child: InkWell(
@@ -85,7 +90,7 @@ class TagPill extends StatelessWidget {
             minWidth: kBloopMinTouchTarget,
             minHeight: kBloopMinTouchTarget,
           ),
-          child: Center(widthFactor: 1, child: pill),
+          child: Center(widthFactor: 1, heightFactor: 1, child: pill),
         ),
       ),
     );

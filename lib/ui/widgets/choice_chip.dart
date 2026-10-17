@@ -24,11 +24,19 @@ class BloopChoiceChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = BloopTokens.of(context);
     final enabled = onSelected != null;
+    // A disabled chip drops the action fill so its text stays readable.
+    final filled = selected && enabled;
     final foreground = !enabled
         ? tokens.muted
         : selected
         ? tokens.onAction
         : tokens.ink;
+    final outline = filled
+        ? tokens.action
+        : selected
+        ? tokens.muted
+        : tokens.border;
+    final radius = BorderRadius.circular(BloopRadii.md);
     final style = Theme.of(
       context,
     ).textTheme.labelLarge?.copyWith(color: foreground);
@@ -42,32 +50,44 @@ class BloopChoiceChip extends StatelessWidget {
       onTap: enabled ? () => onSelected!(!selected) : null,
       child: InkWell(
         onTap: enabled ? () => onSelected!(!selected) : null,
-        borderRadius: BorderRadius.circular(BloopRadii.md),
+        borderRadius: radius,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: kBloopMinTouchTarget),
           child: Center(
             widthFactor: 1,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
+            heightFactor: 1,
+            // Ink paints the fill on the Material so the tap ripple shows
+            // above it, including on a selected chip.
+            child: Ink(
               height: _height,
               padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x3),
               decoration: BoxDecoration(
-                color: selected ? tokens.action : Colors.transparent,
-                borderRadius: BorderRadius.circular(BloopRadii.md),
-                border: Border.all(
-                  color: selected ? tokens.action : tokens.border,
-                  width: selected ? 2 : 1,
-                ),
+                color: filled ? tokens.action : Colors.transparent,
+                borderRadius: radius,
+                border: Border.all(color: outline, width: selected ? 2 : 1),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (selected) ...[
-                    Icon(Icons.check, size: 16, color: foreground),
-                    const SizedBox(width: BloopSpace.x1),
-                  ],
-                  Text(label, style: style),
-                ],
+              // See TagPill: Flexible needs a bounded width.
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final text = Text(
+                    label,
+                    style: style,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  );
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (selected) ...[
+                        Icon(Icons.check, size: 16, color: foreground),
+                        const SizedBox(width: BloopSpace.x1),
+                      ],
+                      constraints.hasBoundedWidth
+                          ? Flexible(child: text)
+                          : text,
+                    ],
+                  );
+                },
               ),
             ),
           ),

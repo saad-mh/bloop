@@ -83,7 +83,7 @@ class _SegmentButton extends StatelessWidget {
     final enabled = onTap != null;
     final radius = BorderRadius.circular(BloopRadii.sm);
     final foreground = !enabled
-        ? tokens.muted
+        ? (selected ? tokens.ink : tokens.muted)
         : selected
         ? tokens.onAction
         : tokens.ink;
@@ -97,7 +97,12 @@ class _SegmentButton extends StatelessWidget {
       label: label,
       onTap: onTap,
       child: Material(
-        color: selected ? tokens.action : Colors.transparent,
+        // A disabled selection drops the action fill so its text stays readable.
+        color: !selected
+            ? Colors.transparent
+            : enabled
+            ? tokens.action
+            : tokens.border,
         borderRadius: radius,
         child: InkWell(
           onTap: onTap,

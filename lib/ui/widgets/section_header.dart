@@ -31,54 +31,66 @@ class SectionHeader extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final collapsible = onToggle != null;
 
-    final content = ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: kBloopMinTouchTarget),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x4),
-        child: Row(
-          children: [
-            Expanded(
-              child: Row(
-                children: [
-                  Flexible(
+    final content = LayoutBuilder(
+      builder: (context, constraints) {
+        final rowWidth = constraints.maxWidth;
+        return ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: kBloopMinTouchTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          label,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.titleSmall,
+                        ),
+                      ),
+                      if (count != null) ...[
+                        const SizedBox(width: BloopSpace.x2),
+                        Text(
+                          '$count',
+                          style: textTheme.titleSmall?.copyWith(
+                            color: tokens.muted,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (date != null)
+                  // Natural width so it hugs the right edge, capped at half the
+                  // row so a long date cannot push the label out.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: rowWidth / 2),
                     child: Text(
-                      label,
+                      date!,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.titleSmall,
+                      style: textTheme.bodySmall?.copyWith(color: tokens.muted),
                     ),
                   ),
-                  if (count != null) ...[
-                    const SizedBox(width: BloopSpace.x2),
-                    Text(
-                      '$count',
-                      style: textTheme.titleSmall?.copyWith(
-                        color: tokens.muted,
-                        fontWeight: FontWeight.w400,
-                      ),
+                if (collapsible) ...[
+                  const SizedBox(width: BloopSpace.x2),
+                  AnimatedRotation(
+                    turns: expanded ? 0 : -0.25,
+                    duration: const Duration(milliseconds: 150),
+                    child: Icon(
+                      Icons.expand_more,
+                      size: 20,
+                      color: tokens.muted,
                     ),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
-            if (date != null)
-              Flexible(
-                child: Text(
-                  date!,
-                  overflow: TextOverflow.ellipsis,
-                  style: textTheme.bodySmall?.copyWith(color: tokens.muted),
-                ),
-              ),
-            if (collapsible) ...[
-              const SizedBox(width: BloopSpace.x2),
-              AnimatedRotation(
-                turns: expanded ? 0 : -0.25,
-                duration: const Duration(milliseconds: 150),
-                child: Icon(Icons.expand_more, size: 20, color: tokens.muted),
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
 
     return Semantics(

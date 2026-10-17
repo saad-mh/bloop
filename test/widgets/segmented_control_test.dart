@@ -170,4 +170,31 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('disabled selection is not drawn in the action fill', (
+    tester,
+  ) async {
+    await pumpThemed(
+      tester,
+      const SegmentedControl<String>(
+        segments: _priorities,
+        selected: 'normal',
+        onChanged: null,
+      ),
+    );
+
+    final fills = tester
+        .widgetList<Material>(
+          find.descendant(
+            of: find.byType(SegmentedControl<String>),
+            matching: find.byType(Material),
+          ),
+        )
+        .where((m) => m.color == BloopTokens.light.action);
+    expect(fills, isEmpty);
+    expect(
+      tester.widget<Text>(find.text('Normal')).style?.color,
+      BloopTokens.light.ink,
+    );
+  });
 }

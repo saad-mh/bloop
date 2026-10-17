@@ -71,14 +71,41 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('tappable pill is announced as a tag button', (tester) async {
+  testWidgets('tappable pill is announced as a button', (tester) async {
     final handle = tester.ensureSemantics();
     await pumpThemed(tester, TagPill(label: 'work', onTap: () {}));
 
     expect(
       tester.getSemantics(find.byType(TagPill)),
-      matchesSemantics(label: 'Tag work', isButton: true, hasTapAction: true),
+      matchesSemantics(label: 'work', isButton: true, hasTapAction: true),
     );
     handle.dispose();
+  });
+
+  testWidgets('does not stretch to fill a bounded-height row', (tester) async {
+    await pumpThemed(
+      tester,
+      SizedBox(
+        height: 300,
+        child: Row(
+          children: [TagPill(label: 'work', onTap: () {})],
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(InkWell)).height, kBloopMinTouchTarget);
+  });
+
+  testWidgets('lays out in an unbounded-width row', (tester) async {
+    await pumpThemed(
+      tester,
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(children: const [TagPill(label: 'work')]),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('work'), findsOneWidget);
   });
 }

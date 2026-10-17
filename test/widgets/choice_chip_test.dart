@@ -7,13 +7,13 @@ import 'pump_app.dart';
 
 void main() {
   BoxDecoration decorationOf(WidgetTester tester) {
-    final box = tester.widget<AnimatedContainer>(
+    final ink = tester.widget<Ink>(
       find.descendant(
         of: find.byType(BloopChoiceChip),
-        matching: find.byType(AnimatedContainer),
+        matching: find.byType(Ink),
       ),
     );
-    return box.decoration! as BoxDecoration;
+    return ink.decoration! as BoxDecoration;
   }
 
   testWidgets('unselected chip is outlined with no tick', (tester) async {
@@ -116,5 +116,65 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('disabled selected chip is not filled, so text stays readable', (
+    tester,
+  ) async {
+    await pumpThemed(
+      tester,
+      const BloopChoiceChip(label: 'Work', selected: true, onSelected: null),
+    );
+
+    expect(decorationOf(tester).color, Colors.transparent);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+  });
+
+  testWidgets('does not stretch to fill a bounded-height row', (tester) async {
+    await pumpThemed(
+      tester,
+      SizedBox(
+        height: 300,
+        child: Row(
+          children: [
+            BloopChoiceChip(label: 'Work', selected: false, onSelected: (_) {}),
+          ],
+        ),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(InkWell)).height, kBloopMinTouchTarget);
+  });
+
+  testWidgets('long label ellipsises when width is bounded', (tester) async {
+    await pumpThemed(
+      tester,
+      SizedBox(
+        width: 100,
+        child: BloopChoiceChip(
+          label: 'A really quite long filter name',
+          selected: true,
+          onSelected: (_) {},
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('lays out in an unbounded-width row', (tester) async {
+    await pumpThemed(
+      tester,
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            BloopChoiceChip(label: 'Work', selected: true, onSelected: (_) {}),
+          ],
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
   });
 }

@@ -132,4 +132,43 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('date and chevron hug the right edge', (tester) async {
+    await pumpThemed(
+      tester,
+      SizedBox(
+        width: 400,
+        child: SectionHeader(
+          label: 'Today',
+          count: 3,
+          date: 'Sat, Oct 17',
+          onToggle: () {},
+        ),
+      ),
+    );
+
+    final row = tester.getRect(find.byType(SectionHeader));
+    final date = tester.getRect(find.text('Sat, Oct 17'));
+    final chevron = tester.getRect(find.byIcon(Icons.expand_more));
+    expect(chevron.right, closeTo(row.right - BloopSpace.x4, 0.5));
+    expect(chevron.left - date.right, closeTo(BloopSpace.x2, 0.5));
+  });
+
+  testWidgets('date without a chevron ends at the right padding', (
+    tester,
+  ) async {
+    await pumpThemed(
+      tester,
+      const SizedBox(
+        width: 400,
+        child: SectionHeader(label: 'Today', date: 'Sat, Oct 17'),
+      ),
+    );
+
+    final row = tester.getRect(find.byType(SectionHeader));
+    expect(
+      tester.getRect(find.text('Sat, Oct 17')).right,
+      closeTo(row.right - BloopSpace.x4, 0.5),
+    );
+  });
 }
