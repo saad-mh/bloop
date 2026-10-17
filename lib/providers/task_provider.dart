@@ -183,6 +183,10 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
     try {
       final demoTasks = buildDemoTasks(DateTime.now());
 
+      // The tag picker lists the `tags` box, not the tags found on tasks.
+      for (final tag in {for (final t in demoTasks) ...t.tags}) {
+        await _storage.addTag(tag);
+      }
       for (final task in demoTasks) {
         await addOrUpdate(task);
       }
