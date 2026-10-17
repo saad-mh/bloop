@@ -9,6 +9,7 @@ import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/task_editor_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
 import 'package:bloop/ui/widgets/choice_chip.dart';
+import 'package:bloop/utils/tag_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,9 +53,10 @@ class _FakeTags extends TagsNotifier {
   final added = <String>[];
 
   @override
-  Future<void> addTag(String tag) async {
+  Future<TagNameError?> addTag(String tag) async {
     added.add(tag);
     state = AsyncData([...state.value!, tag]);
+    return null;
   }
 }
 
@@ -298,6 +300,24 @@ void main() {
       await tap(tester, find.text('Add task'));
       expect(tags.added, ['errands']);
       expect(tasks.saved.single.tags, ['errands']);
+    });
+
+    testWidgets('a new tag named like an existing one picks that one', (
+      tester,
+    ) async {
+      await openEditor(tester);
+      await typeTitle(tester, 'Lab report');
+
+      await tap(tester, find.text('New tag'));
+      await tester.enterText(find.byType(TextField).last, 'COLLEGE');
+      await tap(tester, find.text('Add'));
+
+      expect(chip(tester, 'college').selected, isTrue);
+      expect(find.widgetWithText(BloopChoiceChip, 'COLLEGE'), findsNothing);
+
+      await tap(tester, find.text('Add task'));
+      expect(tags.added, isEmpty);
+      expect(tasks.saved.single.tags, ['college']);
     });
 
     testWidgets('a new tag is not stored when the page is discarded', (
