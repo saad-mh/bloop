@@ -42,6 +42,34 @@ void main() {
     expect(find.byIcon(Icons.check), findsOneWidget);
   });
 
+  testWidgets('an unselected chip shows its icon, a selected one the tick', (
+    tester,
+  ) async {
+    await pumpThemed(
+      tester,
+      BloopChoiceChip(
+        label: 'Pick date',
+        selected: false,
+        icon: Icons.calendar_today,
+        onSelected: (_) {},
+      ),
+    );
+    expect(find.byIcon(Icons.calendar_today), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsNothing);
+
+    await pumpThemed(
+      tester,
+      BloopChoiceChip(
+        label: 'Pick date',
+        selected: true,
+        icon: Icons.calendar_today,
+        onSelected: (_) {},
+      ),
+    );
+    expect(find.byIcon(Icons.calendar_today), findsNothing);
+    expect(find.byIcon(Icons.check), findsOneWidget);
+  });
+
   testWidgets('tapping reports the toggled value', (tester) async {
     final values = <bool>[];
     await pumpThemed(

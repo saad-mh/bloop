@@ -6,17 +6,22 @@ import '../theme/tokens.dart';
 ///
 /// Selection never relies on colour alone: a selected chip is filled with the
 /// action colour, shows a tick and has a heavier outline.
+///
+/// An optional [icon] leads an unselected chip; a selected one shows the tick
+/// in its place.
 class BloopChoiceChip extends StatelessWidget {
   const BloopChoiceChip({
     super.key,
     required this.label,
     required this.selected,
     required this.onSelected,
+    this.icon,
   });
 
   final String label;
   final bool selected;
   final ValueChanged<bool>? onSelected;
+  final IconData? icon;
 
   static const double _height = 32;
 
@@ -78,8 +83,12 @@ class BloopChoiceChip extends StatelessWidget {
                   return Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (selected) ...[
-                        Icon(Icons.check, size: 16, color: foreground),
+                      if (selected || icon != null) ...[
+                        Icon(
+                          selected ? Icons.check : icon,
+                          size: 16,
+                          color: foreground,
+                        ),
                         const SizedBox(width: BloopSpace.x1),
                       ],
                       constraints.hasBoundedWidth
