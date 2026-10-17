@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/task.dart';
 import '../../utils/date_utils.dart';
 import '../theme/tokens.dart';
-import 'tag_chip.dart';
+import 'tag_pill.dart';
 
 class TaskTile extends StatefulWidget {
   const TaskTile({
@@ -146,7 +146,7 @@ class _TaskTileState extends State<TaskTile> {
                                   Row(
                                     children: [
                                       if (widget.task.tags.isNotEmpty)
-                                        TagChip(label: widget.task.tags.first),
+                                        Flexible(child: TagPill(label: widget.task.tags.first)),
                                       if (widget.task.tags.isNotEmpty)
                                         const SizedBox(width: 10),
                                       if (dueDateTime != null)
