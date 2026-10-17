@@ -1,4 +1,5 @@
 import 'package:bloop/models/task.dart';
+import 'package:bloop/models/recurrence.dart';
 import 'package:bloop/ui/widgets/task_tile.dart';
 import 'package:bloop/utils/date_utils.dart';
 import 'package:flutter/material.dart';
@@ -223,6 +224,162 @@ void main() {
       final size = tester.getSize(find.byType(InkResponse));
       expect(size.width, greaterThanOrEqualTo(48));
       expect(size.height, greaterThanOrEqualTo(48));
+    });
+
+    testWidgets('actions show only while expanded', (tester) async {
+      Widget expandable({required bool expanded}) => TaskTile(
+        task: Task(title: 'a'),
+        now: clock,
+        expanded: expanded,
+        actions: const Text('the actions'),
+      );
+
+      await pumpThemed(tester, expandable(expanded: false));
+      expect(find.text('the actions'), findsNothing);
+
+      await pumpThemed(tester, expandable(expanded: true));
+      await tester.pumpAndSettle();
+      expect(find.text('the actions'), findsOneWidget);
+
+      await pumpThemed(tester, expandable(expanded: false));
+      await tester.pumpAndSettle();
+      expect(find.text('the actions'), findsNothing);
+    });
+
+    testWidgets('tapping the actions does not tap the row', (tester) async {
+      var opened = 0;
+      await pumpThemed(
+        tester,
+        TaskTile(
+          task: Task(title: 'a'),
+          now: clock,
+          expanded: true,
+          onTap: () => opened++,
+          actions: const Text('the actions'),
+        ),
+      );
+
+      await tester.tap(find.text('the actions'));
+      expect(opened, 0);
+    });
+
+    testWidgets('an open row is tinted, NOW keeps its own fill', (
+      tester,
+    ) async {
+      Future<Color?> fillOf(Task task, {required bool expanded}) async {
+        await pumpThemed(
+          tester,
+          TaskTile(
+            task: task,
+            now: clock,
+            expanded: expanded,
+            actions: const Text('the actions'),
+          ),
+        );
+        return tester
+            .widget<Material>(
+              find
+                  .descendant(
+                    of: find.byType(TaskTile),
+                    matching: find.byType(Material),
+                  )
+                  .first,
+            )
+            .color;
+      }
+
+      final closed = await fillOf(Task(title: 'a'), expanded: false);
+      final open = await fillOf(Task(title: 'a'), expanded: true);
+      expect(closed, Colors.transparent);
+      expect(open, isNot(closed));
+
+      final nowTask = Task(
+        title: 'b',
+        dueDateTime: DateTime(2026, 10, 17, 15, 40),
+      );
+      expect(
+        await fillOf(nowTask, expanded: true),
+        await fillOf(nowTask, expanded: false),
+      );
+    });
+
+    testWidgets('tells screen readers whether the row is expanded', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      Widget expandable({required bool expanded}) => TaskTile(
+        task: Task(title: 'Budget'),
+        now: clock,
+        expanded: expanded,
+        onTap: () {},
+        actions: const Text('the actions'),
+      );
+
+      await pumpThemed(tester, expandable(expanded: false));
+      expect(
+        tester.getSemantics(find.text('Budget')),
+        isSemantics(hasExpandedState: true, isExpanded: false),
+      );
+
+      await pumpThemed(tester, expandable(expanded: true));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.text('Budget')),
+        isSemantics(hasExpandedState: true, isExpanded: true),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('swiping across the actions does not delete', (tester) async {
+      var deleted = 0;
+      await pumpThemed(
+        tester,
+        TaskTile(
+          task: Task(title: 'a'),
+          now: clock,
+          expanded: true,
+          onDelete: () => deleted++,
+          actions: const SizedBox(height: 60, child: Center(child: Text('x'))),
+        ),
+      );
+
+      await tester.drag(find.text('x'), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(deleted, 0);
+
+      await tester.drag(find.text('a'), const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      expect(deleted, 1, reason: 'the row itself still swipes away');
+    });
+
+    testWidgets('a repeating task reappears once moved to its next date', (
+      tester,
+    ) async {
+      final today = Task(
+        title: 'Water plants',
+        recurrence: Recurrence.daily,
+        dueDateTime: DateTime(2026, 10, 17, 18),
+      );
+      Widget tile(Task task) => TaskTile(
+        task: task,
+        now: clock,
+        animateOnComplete: true,
+        onToggleComplete: (_) {},
+      );
+      double opacity() =>
+          tester.widget<AnimatedOpacity>(find.byType(AnimatedOpacity)).opacity;
+
+      await pumpThemed(tester, tile(today));
+      await tester.tap(find.byType(InkResponse));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(opacity(), 0);
+
+      // The same task, id and all, comes back with tomorrow's date.
+      await pumpThemed(
+        tester,
+        tile(today.copyWith(dueDateTime: DateTime(2026, 10, 18, 18))),
+      );
+      expect(opacity(), 1);
     });
 
     testWidgets('swiping left deletes', (tester) async {

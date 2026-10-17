@@ -8,6 +8,7 @@ import 'home_screen.dart';
 import 'focus_screen.dart';
 import 'task_editor_screen.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/tab_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../widgets/floating_nav.dart';
@@ -22,8 +23,6 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
-  int _index = 0;
-
   static const String _permissionsOnboardingKey =
       'permissionsOnboardingDone';
   bool _permissionFlowStarted = false;
@@ -49,10 +48,8 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   void initState() {
     super.initState();
+    assert(_tabs.length == tabCount);
     WidgetsBinding.instance.addObserver(this);
-    final settings = ref.read(settingsProvider);
-    final saved = settings.lastTabIndex;
-    _index = saved >= 0 && saved < _tabs.length ? saved : 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runFirstLaunchPermissionFlow();
     });
@@ -184,10 +181,9 @@ class _AppShellState extends ConsumerState<AppShell>
     }
   }
   void _selectTab(int i) {
-    if (i == _index) return;
+    if (i == ref.read(selectedTabProvider)) return;
     HapticFeedback.selectionClick();
-    setState(() => _index = i);
-    ref.read(settingsProvider.notifier).setLastTabIndex(i);
+    ref.read(selectedTabProvider.notifier).select(i);
   }
 
   void _openNewTask() {
@@ -199,10 +195,11 @@ class _AppShellState extends ConsumerState<AppShell>
   @override
   Widget build(BuildContext context) {
     ref.watch(settingsProvider);
+    final index = ref.watch(selectedTabProvider);
     final focusController = ref.watch(focusControllerProvider);
     final isFullScreen = focusController.isFullScreenActive;
     final pages = IndexedStack(
-      index: _index,
+      index: index,
       children: [for (final tab in _tabs) tab.page],
     );
     return Scaffold(
@@ -211,7 +208,7 @@ class _AppShellState extends ConsumerState<AppShell>
           : FloatingNavLayer(
               nav: FloatingNav(
                 destinations: [for (final tab in _tabs) tab.destination],
-                selectedIndex: _index,
+                selectedIndex: index,
                 onSelected: _selectTab,
                 onNewTask: _openNewTask,
               ),
