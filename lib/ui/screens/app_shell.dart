@@ -31,14 +31,19 @@ class _AppShellState extends ConsumerState<AppShell>
   int _permissionStepIndex = 0;
   final List<_PermissionStep> _permissionSteps = <_PermissionStep>[];
 
-  static const _destinations = [
-    FloatingNavDestination(icon: Icons.check_circle_outline, label: 'Tasks'),
-    FloatingNavDestination(icon: Icons.adjust, label: 'Focus'),
-  ];
-
-  final _pages = const [
-    HomeScreen(),
-    FocusScreen(),
+  /// One entry per tab, so the nav and the pages can't drift apart.
+  static const _tabs = [
+    (
+      destination: FloatingNavDestination(
+        icon: Icons.check_circle_outline,
+        label: 'Tasks',
+      ),
+      page: HomeScreen(),
+    ),
+    (
+      destination: FloatingNavDestination(icon: Icons.adjust, label: 'Focus'),
+      page: FocusScreen(),
+    ),
   ];
 
   @override
@@ -46,9 +51,8 @@ class _AppShellState extends ConsumerState<AppShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final settings = ref.read(settingsProvider);
-    // Older builds stored indices for tabs that no longer exist.
     final saved = settings.lastTabIndex;
-    _index = saved >= 0 && saved < _pages.length ? saved : 0;
+    _index = saved >= 0 && saved < _tabs.length ? saved : 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runFirstLaunchPermissionFlow();
     });
@@ -197,13 +201,16 @@ class _AppShellState extends ConsumerState<AppShell>
     ref.watch(settingsProvider);
     final focusController = ref.watch(focusControllerProvider);
     final isFullScreen = focusController.isFullScreenActive;
-    final pages = IndexedStack(index: _index, children: _pages);
+    final pages = IndexedStack(
+      index: _index,
+      children: [for (final tab in _tabs) tab.page],
+    );
     return Scaffold(
       body: isFullScreen
           ? pages
           : FloatingNavLayer(
               nav: FloatingNav(
-                destinations: _destinations,
+                destinations: [for (final tab in _tabs) tab.destination],
                 selectedIndex: _index,
                 onSelected: _selectTab,
                 onNewTask: _openNewTask,

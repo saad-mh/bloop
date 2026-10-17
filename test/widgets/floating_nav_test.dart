@@ -127,6 +127,28 @@ void main() {
       expect(add.shortestSide, greaterThanOrEqualTo(kBloopMinTouchTarget));
     });
 
+    testWidgets('fits a narrow screen at a large text scale', (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(320, 640),
+            textScaler: TextScaler.linear(2),
+          ),
+          child: _app(),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      final nav = tester.getRect(find.byType(FloatingNav));
+      expect(nav.left, greaterThanOrEqualTo(0));
+      expect(nav.right, lessThanOrEqualTo(320));
+      expect(find.byTooltip('New task'), findsOneWidget);
+    });
+
     testWidgets('renders in the dark theme', (tester) async {
       await tester.pumpWidget(_app(dark: true));
 

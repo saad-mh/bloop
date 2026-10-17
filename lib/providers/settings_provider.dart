@@ -69,6 +69,10 @@ class SettingsState {
 }
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
+  /// Not 'lastTabIndex': the four-tab bar stored indices under that key with
+  /// different meanings (1 was Completed, 2 Focus), so they can't be reused.
+  static const _lastTabKey = 'lastTab';
+
   SettingsNotifier() : super(const SettingsState()) {
     try {
       final box = Hive.box(StorageService.settingsBoxName);
@@ -106,7 +110,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
             ? ThemeMode.values[themeModeIndex]
             : state.themeMode,
         seedColor: seed ?? state.seedColor,
-        lastTabIndex: box.get('lastTabIndex') as int? ?? state.lastTabIndex,
+        lastTabIndex: box.get(_lastTabKey) as int? ?? state.lastTabIndex,
       );
       SharedPreferences.getInstance().then((prefs) {
         prefs.setBool(
@@ -206,7 +210,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(lastTabIndex: index);
     try {
       final box = Hive.box(StorageService.settingsBoxName);
-      box.put('lastTabIndex', index);
+      box.put(_lastTabKey, index);
     } catch (_) {}
   }
 

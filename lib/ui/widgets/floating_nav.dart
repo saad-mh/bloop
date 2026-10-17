@@ -5,6 +5,12 @@ import '../theme/tokens.dart';
 /// Height of the pill and of the New task button.
 const double kFloatingNavHeight = 64;
 
+/// Narrowest a pill segment gets; it grows to fit its label.
+const double kFloatingNavSegmentMinWidth = 96;
+
+/// Height of the fade behind the nav, above the bottom inset.
+const double kFloatingNavScrimHeight = 120;
+
 /// Gap between the nav group and the bottom safe-area edge.
 const double kFloatingNavBottomMargin = BloopSpace.x3;
 
@@ -134,7 +140,7 @@ class _Segment extends StatelessWidget {
             duration: const Duration(milliseconds: 180),
             // Sizes to its label so large text scales don't overflow.
             constraints: const BoxConstraints(
-              minWidth: 96,
+              minWidth: kFloatingNavSegmentMinWidth,
               minHeight: kBloopMinTouchTarget,
             ),
             padding: const EdgeInsets.symmetric(horizontal: BloopSpace.x4),
@@ -174,8 +180,6 @@ class FloatingNavLayer extends StatelessWidget {
   final Widget child;
   final Widget nav;
 
-  static const double _scrimHeight = 120;
-
   @override
   Widget build(BuildContext context) {
     final surface = BloopTokens.of(context).surface;
@@ -188,7 +192,7 @@ class FloatingNavLayer extends StatelessWidget {
           left: 0,
           right: 0,
           bottom: 0,
-          height: _scrimHeight + inset,
+          height: kFloatingNavScrimHeight + inset,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -205,10 +209,12 @@ class FloatingNavLayer extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: 0,
-          right: 0,
+          left: BloopSpace.x4,
+          right: BloopSpace.x4,
           bottom: kFloatingNavBottomMargin + inset,
-          child: Center(child: nav),
+          // Shrinks the group rather than overflowing on narrow screens or
+          // at large text scales.
+          child: FittedBox(fit: BoxFit.scaleDown, child: nav),
         ),
       ],
     );
