@@ -7,6 +7,7 @@ import '../../providers/permission_status_provider.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/settings_screen_controller.dart';
 import 'package:flutter/cupertino.dart';
+import '../theme/tokens.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -16,25 +17,7 @@ class SettingsScreen extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final controller = ref.read(settingsScreenControllerProvider);
     final colorScheme = Theme.of(context).colorScheme;
-    final dialogShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-    );
-    final inputDecoration = InputDecoration(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.outlineVariant),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: colorScheme.primary, width: 2),
-      ),
-      filled: true,
-      fillColor: colorScheme.surfaceContainerHighest,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    );
+    const inputDecoration = InputDecoration();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -46,8 +29,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -69,7 +50,6 @@ class SettingsScreen extends ConsumerWidget {
                       context: context,
                       builder: (_) => SimpleDialog(
                         insetPadding: const EdgeInsets.all(24),
-                        shape: dialogShape,
                         title: const Text('Theme'),
                         children: [
                           Padding(
@@ -129,65 +109,9 @@ class SettingsScreen extends ConsumerWidget {
                     }
                   },
                 ),
-                Divider(height: 1, indent: 15, endIndent: 15,),
-                ListTile(
-                  title: const Text('Accent color'),
-                  // subtitle: Text('#${settings.seedColor.toRadixString(16).padLeft(8, '0').toUpperCase()}'),
-                  onTap: () async {
-                    final colors = controller.accentColors;
-                    final result = await showDialog<int>(
-                      context: context,
-                      builder: (_) => SimpleDialog(
-                        insetPadding: const EdgeInsets.all(24),
-                        shape: dialogShape,
-                        title: const Text('Accent color'),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                for (final c in colors)
-                                  InkWell(
-                                    onTap: () => Navigator.pop(context, c),
-                                    child: Container(
-                                      width: 44,
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: Color(c),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: settings.seedColor == c
-                                              ? (settings.themeMode ==
-                                                      ThemeMode.dark
-                                                  ? Colors.white
-                                                  : Colors.black)
-                                              : Colors.transparent,
-                                          width: 3,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (result != null) {
-                      controller.setSeedColor(result);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Accent color updated'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    }
-                  },
-                ),
+                // Accent colour picker is hidden for 2.0 (monochrome build). The
+                // seedColor setting and controller.accentColors stay for the
+                // colourful build (#16).
               ],
             ),
           ),
@@ -195,8 +119,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -236,8 +158,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -254,7 +174,6 @@ class SettingsScreen extends ConsumerWidget {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        shape: dialogShape,
                         title: const Text('Reset settings'),
                         content: const Text(
                           'Are you sure you want to reset all settings to defaults?',
@@ -267,9 +186,9 @@ class SettingsScreen extends ConsumerWidget {
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
                             style: ButtonStyle(
-                              elevation: MaterialStateProperty.all(5),
+                              elevation: WidgetStateProperty.all(5),
                               foregroundColor:
-                                  MaterialStateProperty.all(Colors.red),
+                                  WidgetStateProperty.all(colorScheme.error),
                             ),
                             child: const Text('Reset'),
                           ),
@@ -323,8 +242,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -345,7 +262,6 @@ class SettingsScreen extends ConsumerWidget {
                     final result = await showDialog<int>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        shape: dialogShape,
                         title: const Text('Default reminder (minutes)'),
                         content: TextField(
                           controller: textController,
@@ -385,7 +301,6 @@ class SettingsScreen extends ConsumerWidget {
                     final result = await showDialog<int>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        shape: dialogShape,
                         title:
                             const Text('Default task time (minutes from now)'),
                         content: TextField(
@@ -423,7 +338,6 @@ class SettingsScreen extends ConsumerWidget {
                     final result = await showDialog<Priority>(
                       context: context,
                       builder: (_) => SimpleDialog(
-                        shape: dialogShape,
                         insetPadding: const EdgeInsets.symmetric(horizontal: 15),
                         title: const Text('Default priority'),
                         children: [
@@ -447,8 +361,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -483,7 +395,6 @@ class SettingsScreen extends ConsumerWidget {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        shape: dialogShape,
                         title: const Text('Clear all tasks'),
                         content:
                             const Text('This will delete all tasks. Continue?'),
@@ -519,8 +430,6 @@ class SettingsScreen extends ConsumerWidget {
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 const Padding(
@@ -555,7 +464,6 @@ class SettingsScreen extends ConsumerWidget {
                     final json = await showDialog<String>(
                       context: context,
                       builder: (_) => AlertDialog(
-                        shape: dialogShape,
                         title: const Text('Import JSON'),
                         content: TextField(
                           controller: textController,
@@ -641,7 +549,9 @@ class _PermissionSettingsScreenState
     }
     return Icon(
       granted ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.exclamationmark_triangle,
-      color: granted ? Colors.green : Colors.orange,
+      color: granted
+          ? BloopTokens.of(context).ink
+          : BloopTokens.of(context).muted,
     );
   }
 
@@ -660,8 +570,6 @@ class _PermissionSettingsScreenState
           Card(
             elevation: 0,
             clipBehavior: Clip.antiAlias,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Column(
               children: [
                 ListTile(

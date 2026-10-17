@@ -41,6 +41,15 @@ flutter:
     - assets/audio/
     - assets/scenery/
 
+  fonts:
+    # Variable fonts (wght axis); licences sit next to them in assets/fonts.
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces.ttf
+    - family: WorkSans
+      fonts:
+        - asset: assets/fonts/WorkSans.ttf
+
 flutter_launcher_icons:
   android: true
   ios: true

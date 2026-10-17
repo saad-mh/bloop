@@ -8,6 +8,7 @@ import 'providers/settings_provider.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
 import 'ui/screens/app_shell.dart';
+import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,17 +50,10 @@ class BloopApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final seed = Color(settings.seedColor);
     return MaterialApp(
       title: 'Bloop',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
       themeMode: settings.themeMode,
       home: const AppShell(),
     );
