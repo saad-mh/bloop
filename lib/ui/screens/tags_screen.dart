@@ -43,23 +43,30 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
     if (action == null || !mounted) return;
     switch (action) {
       case _Rename(:final name):
-        await ref.read(tagsProvider.notifier).renameTag(tag, name);
+        final error = await ref
+            .read(tagsProvider.notifier)
+            .renameTag(tag, name);
+        if (error != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.message)),
+          );
+        }
       case _Delete():
         await _confirmDelete(tag);
     }
   }
 
   Future<void> _confirmDelete(String tag) async {
-    final tasks = ref.read(taskListProvider).valueOrNull ?? const [];
-    final affected = taskCountForTag(tasks, tag);
-    final open = ref.read(tagOpenCountsProvider)[tag] ?? 0;
+    // Null while the list is loading or failed: say so rather than "none".
+    final tasks = ref.read(taskListProvider).valueOrNull;
+    final usage = tasks == null ? null : tagUsage(tasks, tag);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
         final tokens = BloopTokens.of(context);
         return AlertDialog(
           title: Text('Delete "$tag"?'),
-          content: Text(_deleteImpact(affected, open)),
+          content: Text(_deleteImpact(usage)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -308,15 +315,17 @@ class _EditTagDialogState extends ConsumerState<_EditTagDialog> {
   }
 }
 
-/// What deleting a tag does, in terms of the tasks it touches. [affected]
-/// counts completed tasks too; [open] is the part still on the list.
-String _deleteImpact(int affected, int open) {
-  if (affected == 0) return 'No tasks use this tag.';
-  final tasks = affected == 1 ? '1 task' : '$affected tasks';
-  final done = affected - open;
-  final detail = done == 0
-      ? ''
-      : ' ($open open, $done completed)';
+/// What deleting a tag does, in terms of the tasks it touches. [usage] is
+/// null when the task list isn't available to count.
+String _deleteImpact(({int total, int open})? usage) {
+  if (usage == null) {
+    return 'It will be removed from every task that uses it. '
+        'The tasks themselves are kept.';
+  }
+  if (usage.total == 0) return 'No tasks use this tag.';
+  final tasks = usage.total == 1 ? '1 task' : '${usage.total} tasks';
+  final done = usage.total - usage.open;
+  final detail = done == 0 ? '' : ' (${usage.open} open, $done completed)';
   return 'It will be removed from $tasks$detail. '
       'The tasks themselves are kept.';
 }

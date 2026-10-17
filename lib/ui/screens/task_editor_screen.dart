@@ -301,10 +301,15 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     );
     if (result == null || result.isEmpty || !mounted) return;
     final known = ref.read(tagsProvider).valueOrNull ?? const <String>[];
-    if (!known.contains(result) && !_pendingTags.contains(result)) {
+    // Tag names are unique ignoring case, so "work" selects an existing
+    // "Work" instead of adding a second tag storage would refuse.
+    final match = [...known, ..._pendingTags].where(
+      (t) => t.toLowerCase() == result.toLowerCase(),
+    );
+    if (match.isEmpty) {
       setState(() => _pendingTags.add(result));
     }
-    _toggleTag(result, true);
+    _toggleTag(match.isEmpty ? result : match.first, true);
   }
 
   // ---- Closing, saving, deleting ------------------------------------------

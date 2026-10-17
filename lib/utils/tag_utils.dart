@@ -3,7 +3,10 @@ import '../models/task.dart';
 /// Why a tag name was refused.
 enum TagNameError {
   empty('Enter a name for the tag'),
-  duplicate('A tag with that name already exists');
+  duplicate('A tag with that name already exists'),
+
+  /// Storage threw; nothing was validated against.
+  failed('Could not save the tag. Try again');
 
   const TagNameError(this.message);
 
@@ -43,7 +46,16 @@ Map<String, int> openTaskCounts(Iterable<Task> tasks) {
   return counts;
 }
 
-/// How many tasks, completed ones included, carry [tag]. This is the number a
-/// delete or rename touches.
-int taskCountForTag(Iterable<Task> tasks, String tag) =>
-    tasks.where((t) => t.tags.contains(tag)).length;
+/// How many tasks carry [tag], completed ones included (`total`, what a
+/// delete or rename touches), and how many of those are still open. Both come
+/// from one pass so they always agree.
+({int total, int open}) tagUsage(Iterable<Task> tasks, String tag) {
+  var total = 0;
+  var open = 0;
+  for (final task in tasks) {
+    if (!task.tags.contains(tag)) continue;
+    total++;
+    if (!task.isCompleted) open++;
+  }
+  return (total: total, open: open);
+}

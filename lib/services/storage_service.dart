@@ -80,8 +80,9 @@ class StorageService {
   }
 
   /// Removes [tag] and strips it from every task, completed ones included.
+  /// The tag leaves the list last, so a failure partway leaves it listed and
+  /// the delete can be retried.
   Future<void> deleteTag(String tag) async {
-    await _tagsBox.delete(tag);
     for (final task in _box.values) {
       if (task.tags.contains(tag)) {
         task.tags.removeWhere((t) => t == tag);
@@ -89,32 +90,33 @@ class StorageService {
         await task.save();
       }
     }
+    await _tagsBox.delete(tag);
   }
 
   /// Renames [oldTag] on the tag list and on every task that carries it.
-  /// Returns why [newTag] was refused, or null once renamed.
+  /// Returns why [newTag] was refused, or null once renamed. The old name
+  /// leaves the list last, so a failure partway leaves it listed and the
+  /// rename can be retried.
   Future<TagNameError?> renameTag(String oldTag, String newTag) async {
     final error = validateTagName(newTag, getTags(), renaming: oldTag);
     if (error != null) return error;
     final name = newTag.trim();
     if (name == oldTag) return null;
-    await _tagsBox.delete(oldTag);
     await _tagsBox.put(name, name);
     for (final task in _box.values) {
       if (!task.tags.contains(oldTag)) continue;
-      // A task may already carry the new name from before the tag list
-      // tracked it; keep one copy.
-      final alreadyHasNew = task.tags.contains(name);
-      task.tags = [
-        for (final t in task.tags)
-          if (t != oldTag)
-            t
-          else if (!alreadyHasNew)
-            name,
-      ];
+      // Swap the name in place and keep one copy, even if the task already
+      // carried the new name or listed the old one twice.
+      final renamed = <String>[];
+      for (final t in task.tags) {
+        final next = t == oldTag ? name : t;
+        if (!renamed.contains(next)) renamed.add(next);
+      }
+      task.tags = renamed;
       task.updatedAt = DateTime.now().toUtc();
       await task.save();
     }
+    await _tagsBox.delete(oldTag);
     return null;
   }
 }

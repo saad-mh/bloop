@@ -302,6 +302,24 @@ void main() {
       expect(tasks.saved.single.tags, ['errands']);
     });
 
+    testWidgets('a new tag named like an existing one picks that one', (
+      tester,
+    ) async {
+      await openEditor(tester);
+      await typeTitle(tester, 'Lab report');
+
+      await tap(tester, find.text('New tag'));
+      await tester.enterText(find.byType(TextField).last, 'COLLEGE');
+      await tap(tester, find.text('Add'));
+
+      expect(chip(tester, 'college').selected, isTrue);
+      expect(find.widgetWithText(BloopChoiceChip, 'COLLEGE'), findsNothing);
+
+      await tap(tester, find.text('Add task'));
+      expect(tags.added, isEmpty);
+      expect(tasks.saved.single.tags, ['college']);
+    });
+
     testWidgets('a new tag is not stored when the page is discarded', (
       tester,
     ) async {

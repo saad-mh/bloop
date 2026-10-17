@@ -51,34 +51,39 @@ class TagsNotifier extends StateNotifier<AsyncValue<List<String>>> {
       final error = await _storage.addTag(tag);
       await load();
       return error;
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      return null;
+    } catch (_) {
+      return TagNameError.failed;
     }
   }
 
   Future<void> deleteTag(String tag) async {
     try {
       await _storage.deleteTag(tag);
-      await load();
-      await onTasksChanged?.call();
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
+    await load();
+    await onTasksChanged?.call();
   }
 
   /// Returns why [newTag] was refused, or null once renamed.
   Future<TagNameError?> renameTag(String oldTag, String newTag) async {
+    TagNameError? error;
     try {
-      final error = await _storage.renameTag(oldTag, newTag);
-      if (error != null) return error;
-      onRenamed?.call(oldTag, newTag.trim());
+      error = await _storage.renameTag(oldTag, newTag);
+    } catch (_) {
+      error = TagNameError.failed;
+    }
+    if (error == TagNameError.failed) {
+      // Some tasks may already carry the new name.
       await load();
       await onTasksChanged?.call();
-      return null;
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-      return null;
+      return error;
     }
+    if (error != null) return error;
+    onRenamed?.call(oldTag, newTag.trim());
+    await load();
+    await onTasksChanged?.call();
+    return null;
   }
 }

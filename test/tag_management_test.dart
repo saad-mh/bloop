@@ -69,15 +69,19 @@ void main() {
     });
   });
 
-  group('taskCountForTag', () {
-    test('includes completed tasks, since delete touches them too', () {
+  group('tagUsage', () {
+    test('counts completed tasks in total, and open ones separately', () {
       final tasks = [
         _task('a', ['x']),
         _task('b', ['x'], done: true),
         _task('c', ['y']),
       ];
-      expect(taskCountForTag(tasks, 'x'), 2);
-      expect(taskCountForTag(tasks, 'z'), 0);
+      expect(tagUsage(tasks, 'x'), (total: 2, open: 1));
+      expect(tagUsage(tasks, 'z'), (total: 0, open: 0));
+    });
+
+    test('counts a task once even if it lists the tag twice', () {
+      expect(tagUsage([_task('a', ['x', 'x'])], 'x'), (total: 1, open: 1));
     });
   });
 
@@ -186,6 +190,15 @@ void main() {
       await storage.renameTag('college', 'uni');
 
       expect(storage.getById(task.id)!.tags, ['uni']);
+    });
+
+    test('renameTag collapses a tag listed twice on one task', () async {
+      await storage.addTag('a');
+      final task = await put('t', ['a', 'a']);
+
+      await storage.renameTag('a', 'b');
+
+      expect(storage.getById(task.id)!.tags, ['b']);
     });
 
     test('deleteTag removes the tag from every task and keeps the tasks',
