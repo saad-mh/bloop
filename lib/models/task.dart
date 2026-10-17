@@ -26,9 +26,9 @@ class Task extends HiveObject {
     this.completedAt,
     this.notificationId,
     this.notificationIds,
-  }) : id = id ?? _uuid.v4(),
-       createdAt = createdAt ?? DateTime.now().toUtc(),
-       tags = tags ?? [];
+  })  : id = id ?? _uuid.v4(),
+        createdAt = createdAt ?? DateTime.now().toUtc(),
+        tags = tags ?? [];
 
   @HiveField(0)
   final String id;
@@ -120,8 +120,7 @@ class Task extends HiveObject {
       dueDateTime: dueDateTime ?? this.dueDateTime,
       allDay: allDay ?? this.allDay,
       recurrence: recurrence ?? this.recurrence,
-      reminderMinutes:
-          reminderBefore?.inMinutes ??
+      reminderMinutes: reminderBefore?.inMinutes ??
           (resolvedReminders?.isNotEmpty == true
               ? resolvedReminders!.first.inMinutes
               : reminderMinutes),
@@ -191,7 +190,7 @@ class Task extends HiveObject {
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
       notificationId: json['notificationId'] as int?,
-      notificationIds: (json['notificationIds'] as List?)
+        notificationIds: (json['notificationIds'] as List?)
           ?.map((e) => e as int)
           .toList(),
     );

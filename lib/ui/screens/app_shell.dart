@@ -24,7 +24,8 @@ class _AppShellState extends ConsumerState<AppShell>
     with WidgetsBindingObserver {
   int _index = 0;
 
-  static const String _permissionsOnboardingKey = 'permissionsOnboardingDone';
+  static const String _permissionsOnboardingKey =
+      'permissionsOnboardingDone';
   bool _permissionFlowStarted = false;
   bool _waitingForReturn = false;
   int _permissionStepIndex = 0;
@@ -82,14 +83,14 @@ class _AppShellState extends ConsumerState<AppShell>
     _permissionSteps.clear();
 
     if (Platform.isAndroid) {
-      final hasNotifications = await NotificationService.instance
-          .hasNotificationPermission();
+      final hasNotifications =
+          await NotificationService.instance.hasNotificationPermission();
       if (hasNotifications != true) {
         _permissionSteps.add(_PermissionStep.notifications);
       }
 
-      final canExact = await NotificationService.instance
-          .checkExactAlarmAllowed();
+      final canExact =
+          await NotificationService.instance.checkExactAlarmAllowed();
       if (canExact != true) {
         _permissionSteps.add(_PermissionStep.exactAlarm);
       }
@@ -182,7 +183,6 @@ class _AppShellState extends ConsumerState<AppShell>
         );
     }
   }
-
   void _selectTab(int i) {
     if (i == _index) return;
     HapticFeedback.selectionClick();
@@ -191,9 +191,9 @@ class _AppShellState extends ConsumerState<AppShell>
   }
 
   void _openNewTask() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const TaskEditorScreen()));
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TaskEditorScreen()),
+    );
   }
 
   @override
@@ -222,7 +222,10 @@ class _AppShellState extends ConsumerState<AppShell>
   }
 }
 
-enum _PermissionStep { notifications, exactAlarm }
+enum _PermissionStep {
+  notifications,
+  exactAlarm,
+}
 
 class _PermissionDialogCopy {
   const _PermissionDialogCopy({

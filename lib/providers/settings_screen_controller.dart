@@ -11,13 +11,13 @@ class SettingsScreenController {
   final Ref _ref;
 
   List<int> get accentColors => const [
-    0xFF607D8B, // Blue Grey
-    0xFF3F51B5, // Indigo
-    0xFF009688, // Teal
-    0xFFFF5722, // Deep Orange
-    0xFF9C27B0, // Purple
-    0xFF4CAF50, // Green
-  ];
+        0xFF607D8B, // Blue Grey
+        0xFF3F51B5, // Indigo
+        0xFF009688, // Teal
+        0xFFFF5722, // Deep Orange
+        0xFF9C27B0, // Purple
+        0xFF4CAF50, // Green
+      ];
 
   void setThemeMode(ThemeMode mode) {
     _ref.read(settingsProvider.notifier).setThemeMode(mode);
@@ -32,9 +32,7 @@ class SettingsScreenController {
   }
 
   void setFocusSessionNotificationsEnabled(bool value) {
-    _ref
-        .read(settingsProvider.notifier)
-        .setFocusSessionNotificationsEnabled(value);
+    _ref.read(settingsProvider.notifier).setFocusSessionNotificationsEnabled(value);
   }
 
   void setFocusFullScreenEnabled(bool value) {
@@ -84,8 +82,6 @@ class SettingsScreenController {
   }
 }
 
-final settingsScreenControllerProvider = Provider<SettingsScreenController>((
-  ref,
-) {
+final settingsScreenControllerProvider = Provider<SettingsScreenController>((ref) {
   return SettingsScreenController(ref);
 });
