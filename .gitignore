@@ -48,3 +48,4 @@ upload-keystore.jks
 
 /.github/
 pubspec.lock
+output.txt
