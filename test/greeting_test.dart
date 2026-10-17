@@ -7,15 +7,15 @@ void main() {
 
   group('greetingFor', () {
     test('follows the clock at every boundary', () {
-      expect(greetingFor(at(4, 59)), 'Good night');
-      expect(greetingFor(at(5)), 'Good morning');
-      expect(greetingFor(at(11, 59)), 'Good morning');
-      expect(greetingFor(at(12)), 'Good afternoon');
-      expect(greetingFor(at(16, 59)), 'Good afternoon');
-      expect(greetingFor(at(17)), 'Good evening');
-      expect(greetingFor(at(20, 59)), 'Good evening');
-      expect(greetingFor(at(21)), 'Good night');
-      expect(greetingFor(at(0)), 'Good night');
+      expect(greetingFor(at(4, 59)), 'Good night, User');
+      expect(greetingFor(at(5)), 'Good morning, User');
+      expect(greetingFor(at(11, 59)), 'Good morning, User');
+      expect(greetingFor(at(12)), 'Good afternoon, User');
+      expect(greetingFor(at(16, 59)), 'Good afternoon, User');
+      expect(greetingFor(at(17)), 'Good evening, User');
+      expect(greetingFor(at(20, 59)), 'Good evening, User');
+      expect(greetingFor(at(21)), 'Good night, User');
+      expect(greetingFor(at(0)), 'Good night, User');
     });
 
     test('adds the first name only', () {
@@ -26,10 +26,10 @@ void main() {
       );
     });
 
-    test('falls back to the bare greeting without a name', () {
-      expect(greetingFor(at(9), name: null), 'Good morning');
-      expect(greetingFor(at(9), name: ''), 'Good morning');
-      expect(greetingFor(at(9), name: '   '), 'Good morning');
+    test('calls the user "User" without a name', () {
+      expect(greetingFor(at(9), name: null), 'Good morning, User');
+      expect(greetingFor(at(9), name: ''), 'Good morning, User');
+      expect(greetingFor(at(9), name: '   '), 'Good morning, User');
     });
   });
 }

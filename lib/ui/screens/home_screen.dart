@@ -16,8 +16,31 @@ import 'completed_screen.dart';
 import 'settings_screen.dart';
 import 'task_editor_screen.dart';
 
+/// Width ScreenHeader gives to everything but the title: its horizontal
+/// padding, the gear, the gap after it, and the two action buttons.
+const double _headerButtonsWidth =
+    2 * BloopSpace.x2 + 3 * kBloopMinTouchTarget + BloopSpace.x1;
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
+
+  /// The greeting, or plain "Tasks" when it wouldn't fit in [available]
+  /// (narrow phone, long name or large text size) and would be cut off.
+  String _headerTitle(BuildContext context, String userName, double available) {
+    final greeting = greetingFor(DateTime.now(), name: userName);
+    final painter = TextPainter(
+      text: TextSpan(
+        text: greeting,
+        style: Theme.of(context).textTheme.headlineMedium,
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final fits = painter.width <= available;
+    painter.dispose();
+    return fits ? greeting : 'Tasks';
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,35 +48,47 @@ class HomeScreen extends ConsumerWidget {
     final selectedTag = ref.watch(effectiveTagProvider);
     final userName = ref.watch(settingsProvider.select((s) => s.userName));
 
+    // Tasks-only means nothing left to do, as opposed to nothing added yet.
+    final hasCompleted =
+        ref.watch(completedTasksProvider).valueOrNull?.isNotEmpty ?? false;
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            ScreenHeader(
-              title: greetingFor(DateTime.now(), name: userName),
-              leading: BloopIconButton(
-                icon: Icons.settings_outlined,
-                tooltip: 'Settings',
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            LayoutBuilder(
+              builder: (context, constraints) => ScreenHeader(
+                title: _headerTitle(
+                  context,
+                  userName,
+                  constraints.maxWidth - _headerButtonsWidth,
                 ),
-              ),
-              actions: [
-                // TODO(#13): remove once Completed is a section of this list.
-                BloopIconButton(
-                  icon: Icons.done_all,
-                  tooltip: 'Completed',
+                leading: BloopIconButton(
+                  icon: Icons.settings_outlined,
+                  tooltip: 'Settings',
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const CompletedScreen()),
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
                   ),
                 ),
-                BloopIconButton(
-                  icon: Icons.search,
-                  tooltip: 'Search',
-                  onPressed: () => _openSearch(context, ref),
-                ),
-              ],
+                actions: [
+                  // TODO(#13): remove once Completed is a section of this list.
+                  BloopIconButton(
+                    icon: Icons.done_all,
+                    tooltip: 'Completed',
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CompletedScreen(),
+                      ),
+                    ),
+                  ),
+                  BloopIconButton(
+                    icon: Icons.search,
+                    tooltip: 'Search',
+                    onPressed: () => _openSearch(context, ref),
+                  ),
+                ],
+              ),
             ),
             const _TagFilterRow(),
             Expanded(
@@ -62,9 +97,11 @@ class HomeScreen extends ConsumerWidget {
                   if (tasks.isEmpty) {
                     return Center(
                       child: Text(
-                        selectedTag == null
-                            ? 'No tasks yet \n Add some using the + button!'
-                            : 'No tasks tagged "$selectedTag"',
+                        selectedTag != null
+                            ? 'No tasks tagged "$selectedTag"'
+                            : hasCompleted
+                            ? "You're all done!"
+                            : 'No tasks yet \n Add some using the + button!',
                         textAlign: TextAlign.center,
                       ),
                     );

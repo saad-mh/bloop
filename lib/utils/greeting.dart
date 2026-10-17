@@ -1,7 +1,9 @@
 /// Time-based greeting for the home header, e.g. "Good afternoon, Saad".
 ///
 /// Morning 5-12, Afternoon 12-17, Evening 17-21, Night 21-5. Only the first
-/// word of [name] is used; a blank or missing name gives the bare greeting.
+/// word of [name] is used; a blank or missing name reads as [defaultName].
+const defaultName = 'User';
+
 String greetingFor(DateTime now, {String? name}) {
   final hour = now.hour;
   final String part;
@@ -14,8 +16,7 @@ String greetingFor(DateTime now, {String? name}) {
   } else {
     part = 'night';
   }
-  final first = _firstName(name);
-  return first == null ? 'Good $part' : 'Good $part, $first';
+  return 'Good $part, ${_firstName(name) ?? defaultName}';
 }
 
 /// First word of [name], or null when it is missing or blank.

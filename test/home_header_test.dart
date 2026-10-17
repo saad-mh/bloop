@@ -60,8 +60,15 @@ void main() {
     await dir.delete(recursive: true);
   });
 
-  Future<void> pumpHome(WidgetTester tester, {String name = 'Saad'}) async {
-    tester.view.physicalSize = const Size(1170, 2532);
+  /// [width] is in logical pixels. The default is wide enough for the
+  /// greeting even in the test font, which is wider than the bundled ones.
+  Future<void> pumpHome(
+    WidgetTester tester, {
+    String name = 'Saad',
+    double width = 800,
+    List<Override> overrides = const [],
+  }) async {
+    tester.view.physicalSize = Size(width * 3, 2532);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
@@ -69,6 +76,7 @@ void main() {
       ProviderScope(
         overrides: [
           settingsProvider.overrideWith((ref) => _FakeSettings(name)),
+          ...overrides,
         ],
         child: MaterialApp(theme: AppTheme.light, home: const HomeScreen()),
       ),
@@ -82,10 +90,19 @@ void main() {
     expect(find.textContaining(RegExp(r'^Good \w+, Saad$')), findsOneWidget);
   });
 
-  testWidgets('greets without a comma when no name is set', (tester) async {
+  testWidgets('calls the user "User" when no name is set', (tester) async {
     await pumpHome(tester, name: '');
 
-    expect(find.textContaining(RegExp(r'^Good \w+$')), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^Good \w+, User$')), findsOneWidget);
+  });
+
+  testWidgets('shows Tasks instead of a greeting that would be cut off', (
+    tester,
+  ) async {
+    await pumpHome(tester, width: 320);
+
+    expect(find.text('Tasks'), findsOneWidget);
+    expect(find.textContaining('Good '), findsNothing);
   });
 
   testWidgets('old title and filter menu are gone', (tester) async {
@@ -191,5 +208,32 @@ void main() {
     expect(container.read(selectedTagProvider), isNull);
     expect(chip('All'), findsOneWidget);
     expect(find.text('Buy milk'), findsOneWidget);
+  });
+
+  group('empty list', () {
+    Override active(List<Task> tasks) =>
+        filteredActiveTasksProvider.overrideWithValue(AsyncData(tasks));
+    Override completed(List<Task> tasks) =>
+        completedTasksProvider.overrideWithValue(AsyncData(tasks));
+
+    testWidgets('says so when nothing was ever added', (tester) async {
+      await pumpHome(tester, overrides: [active([]), completed([])]);
+
+      expect(find.textContaining('No tasks yet'), findsOneWidget);
+      expect(find.text("You're all done!"), findsNothing);
+    });
+
+    testWidgets('celebrates when every task is completed', (tester) async {
+      await pumpHome(
+        tester,
+        overrides: [
+          active([]),
+          completed([Task(title: 'Done', isCompleted: true)]),
+        ],
+      );
+
+      expect(find.text("You're all done!"), findsOneWidget);
+      expect(find.textContaining('No tasks yet'), findsNothing);
+    });
   });
 }

@@ -61,6 +61,12 @@ void main() {
     return settings;
   }
 
+  // The header can also read "Tasks" when the greeting doesn't fit.
+  final navTasks = find.descendant(
+    of: find.byType(FloatingNav),
+    matching: find.text('Tasks'),
+  );
+
   int shownTab(WidgetTester tester) =>
       tester.widget<IndexedStack>(find.byType(IndexedStack).first).index!;
 
@@ -112,7 +118,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(shownTab(tester), 1);
 
-    await tester.tap(find.text('Tasks'));
+    await tester.tap(navTasks);
     await tester.pumpAndSettle();
     expect(shownTab(tester), 0);
 
@@ -122,7 +128,7 @@ void main() {
   testWidgets('re-selecting the current tab does not save', (tester) async {
     final settings = await pumpShell(tester);
 
-    await tester.tap(find.text('Tasks'));
+    await tester.tap(navTasks);
     await tester.pumpAndSettle();
 
     expect(settings.saved, isEmpty);
