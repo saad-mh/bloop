@@ -1210,7 +1210,8 @@ class _FocusSceneryBackground extends StatelessWidget {
 		}
 		switch (config.type) {
 			case SceneryType.gradient:
-				final colors = config.colors ?? [scheme.surface, scheme.surfaceContainerHighest];
+				final colors =
+						config.colors ?? [scheme.surface, scheme.surfaceContainerHighest];
 				return Container(
 					decoration: BoxDecoration(
 						gradient: LinearGradient(
@@ -1330,7 +1331,7 @@ class FocusedTodayCard extends StatelessWidget {
 										// 		child: LinearProgressIndicator(
 										// 			value: progress.toDouble(),
 										// 			minHeight: 6,
-										// 			backgroundColor: scheme.surfaceContainerHighest,
+										// 			backgroundColor: scheme.surfaceVariant,
 										// 			color: scheme.primary,
 										// 			year2023: false,
 										// 		),
