@@ -77,11 +77,7 @@ void main() {
 
     expect(
       tester.getSemantics(find.byType(TagPill)),
-      matchesSemantics(
-        label: 'Tag work',
-        isButton: true,
-        hasTapAction: true,
-      ),
+      matchesSemantics(label: 'Tag work', isButton: true, hasTapAction: true),
     );
     handle.dispose();
   });
