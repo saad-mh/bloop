@@ -1,17 +1,16 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'completed_screen.dart';
 import 'home_screen.dart';
 import 'focus_screen.dart';
-import 'settings_screen.dart';
+import 'task_editor_screen.dart';
 import '../../providers/settings_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
-import 'package:google_nav_bar/google_nav_bar.dart';
-
+import '../widgets/floating_nav.dart';
 import 'focus_controller.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -32,11 +31,14 @@ class _AppShellState extends ConsumerState<AppShell>
   int _permissionStepIndex = 0;
   final List<_PermissionStep> _permissionSteps = <_PermissionStep>[];
 
+  static const _destinations = [
+    FloatingNavDestination(icon: Icons.check_circle_outline, label: 'Tasks'),
+    FloatingNavDestination(icon: Icons.adjust, label: 'Focus'),
+  ];
+
   final _pages = const [
     HomeScreen(),
-    CompletedScreen(),
     FocusScreen(),
-    SettingsScreen(),
   ];
 
   @override
@@ -44,7 +46,9 @@ class _AppShellState extends ConsumerState<AppShell>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final settings = ref.read(settingsProvider);
-    _index = settings.lastTabIndex;
+    // Older builds stored indices for tabs that no longer exist.
+    final saved = settings.lastTabIndex;
+    _index = saved >= 0 && saved < _pages.length ? saved : 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runFirstLaunchPermissionFlow();
     });
@@ -175,58 +179,37 @@ class _AppShellState extends ConsumerState<AppShell>
         );
     }
   }
+  void _selectTab(int i) {
+    if (i == _index) return;
+    HapticFeedback.selectionClick();
+    setState(() => _index = i);
+    ref.read(settingsProvider.notifier).setLastTabIndex(i);
+  }
+
+  void _openNewTask() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const TaskEditorScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.watch(settingsProvider);
     final focusController = ref.watch(focusControllerProvider);
     final isFullScreen = focusController.isFullScreenActive;
+    final pages = IndexedStack(index: _index, children: _pages);
     return Scaffold(
-      extendBody: true,
       body: isFullScreen
-          ? IndexedStack(
-              index: _index,
-              children: _pages,
-            )
-          : SafeArea(
-              child: IndexedStack(
-                index: _index,
-                children: _pages,
+          ? pages
+          : FloatingNavLayer(
+              nav: FloatingNav(
+                destinations: _destinations,
+                selectedIndex: _index,
+                onSelected: _selectTab,
+                onNewTask: _openNewTask,
               ),
-            ),
-      bottomNavigationBar: isFullScreen
-          ? null
-          : SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                child: GNav(
-                  haptic: true,
-                  gap: 6,
-                  // rippleColor: settings.themeMode == ThemeMode.dark
-                  //     ? Colors.grey.shade800
-                  //     : Colors.grey.shade300,
-                  iconSize: 24,
-                  textSize: 12,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-                  tabMargin: const EdgeInsets.symmetric(horizontal: 4),
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  selectedIndex: _index,
-                  onTabChange: (i) {
-                    setState(() => _index = i);
-                    ref.read(settingsProvider.notifier).setLastTabIndex(i);
-                  },
-                  tabBackgroundColor: Theme.of(context)
-                      .colorScheme
-                      .primaryContainer
-                      .withValues(alpha: 0.1),
-                  tabs: const [
-                    GButton(icon: Icons.task_alt, text: 'Tasks'),
-                    GButton(icon: Icons.done_all, text: 'Completed'),
-                    GButton(icon: Icons.workspaces, text: 'Focus'),
-                    GButton(icon: Icons.settings_suggest, text: 'Preferences'),
-                  ],
-                ),
-              ),
+              // Top safe area only: the list runs behind the nav and scrim.
+              child: SafeArea(bottom: false, child: pages),
             ),
     );
   }
