@@ -7,7 +7,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'providers/settings_provider.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
-import 'ui/screens/app_shell.dart';
+import 'ui/screens/onboarding_gate.dart';
 import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -55,7 +55,7 @@ class BloopApp extends ConsumerWidget {
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
       themeMode: settings.themeMode,
-      home: const AppShell(),
+      home: const OnboardingGate(),
     );
   }
 }

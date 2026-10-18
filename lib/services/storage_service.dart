@@ -11,6 +11,8 @@ class StorageService {
   static const tasksBoxName = 'tasks';
   static const tagsBoxName = 'tags';
   static const settingsBoxName = 'settings';
+  static const onboardingCompleteKey = 'onboardingComplete';
+  static const onboardingExampleTaskKey = 'onboardingExampleTaskId';
   static final StorageService instance = StorageService._();
 
   Future<void> init() async {
@@ -25,6 +27,35 @@ class StorageService {
 
   Box<Task> get _box => Hive.box<Task>(tasksBoxName);
   Box<String> get _tagsBox => Hive.box<String>(tagsBoxName);
+  Box get _settingsBox => Hive.box(settingsBoxName);
+
+  /// Whether first-run onboarding is done.
+  ///
+  /// With no flag stored, a box that already holds tasks, tags or settings
+  /// belongs to someone who used the app before onboarding existed, so they
+  /// are marked done instead of being walked through it.
+  bool isOnboardingComplete() {
+    final stored = _settingsBox.get(onboardingCompleteKey) as bool?;
+    if (stored != null) return stored;
+    final existingUser =
+        _box.isNotEmpty || _tagsBox.isNotEmpty || _settingsBox.isNotEmpty;
+    // Not awaited, and a failed write is safe to drop: this decides the same
+    // way on the next launch.
+    if (existingUser) markOnboardingComplete().catchError((_) {});
+    return existingUser;
+  }
+
+  Future<void> markOnboardingComplete() =>
+      _settingsBox.put(onboardingCompleteKey, true);
+
+  /// Id of the example task onboarding left on Home, until it is completed or
+  /// deleted.
+  String? get onboardingExampleTaskId =>
+      _settingsBox.get(onboardingExampleTaskKey) as String?;
+
+  Future<void> setOnboardingExampleTaskId(String? id) => id == null
+      ? _settingsBox.delete(onboardingExampleTaskKey)
+      : _settingsBox.put(onboardingExampleTaskKey, id);
 
   Task? getById(String id) => _box.get(id);
 

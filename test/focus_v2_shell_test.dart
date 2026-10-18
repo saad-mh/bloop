@@ -72,7 +72,12 @@ void main() {
     Hive.registerAdapter(RecurrenceAdapter());
     await Hive.openBox<Task>(StorageService.tasksBoxName, bytes: Uint8List(0));
     await Hive.openBox<String>(StorageService.tagsBoxName, bytes: Uint8List(0));
-    await Hive.openBox(StorageService.settingsBoxName, bytes: Uint8List(0));
+    final settings = await Hive.openBox(
+      StorageService.settingsBoxName,
+      bytes: Uint8List(0),
+    );
+    // These tests are about the shell, not first-run onboarding.
+    await settings.put(StorageService.onboardingCompleteKey, true);
   });
 
   tearDownAll(() async {

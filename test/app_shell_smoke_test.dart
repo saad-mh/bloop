@@ -41,7 +41,9 @@ void main() {
     Hive.registerAdapter(RecurrenceAdapter());
     await Hive.openBox<Task>(StorageService.tasksBoxName);
     await Hive.openBox<String>(StorageService.tagsBoxName);
-    await Hive.openBox(StorageService.settingsBoxName);
+    final settings = await Hive.openBox(StorageService.settingsBoxName);
+    // These tests are about the shell, not first-run onboarding.
+    await settings.put(StorageService.onboardingCompleteKey, true);
   });
 
   Future<_FakeSettings> pumpShell(WidgetTester tester, {int tab = 0}) async {
