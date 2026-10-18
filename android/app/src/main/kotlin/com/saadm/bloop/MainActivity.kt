@@ -2,6 +2,7 @@ package com.saadm.bloop
 
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.provider.Settings
 import android.os.Build
 import android.util.Log
@@ -45,7 +46,17 @@ class MainActivity : FlutterActivity() {
 					}
 					"requestExactAlarm" -> {
 						try {
-							val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+							if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+								// Exact alarms need no special access before Android 12.
+								result.success(true)
+								return@setMethodCallHandler
+							}
+							// With the package URI the system opens Bloop's own toggle;
+							// without it the user lands on a list of every app.
+							val intent = Intent(
+								Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+								Uri.parse("package:$packageName")
+							)
 							intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 							startActivity(intent)
 							// We opened settings for the user; do not assume permission granted yet.
