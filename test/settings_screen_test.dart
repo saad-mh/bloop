@@ -340,11 +340,29 @@ void main() {
     expect(find.text('All tasks cleared'), findsOneWidget);
   });
 
+  testWidgets('the new Focus screen is off until switched on, and saves', (
+    tester,
+  ) async {
+    await open(tester);
+    expect(settings().focusV2Enabled, isFalse);
+
+    await tapText(tester, 'New Focus screen');
+    expect(settings().focusV2Enabled, isTrue);
+    expect(
+      Hive.box(StorageService.settingsBoxName).get('focusV2Enabled'),
+      isTrue,
+    );
+
+    await tapText(tester, 'New Focus screen');
+    expect(settings().focusV2Enabled, isFalse);
+  });
+
   testWidgets('reset asks first, then restores every setting', (tester) async {
     await open(tester, advanced: true);
     final notifier = container.read(settingsProvider.notifier)
       ..setUserName('Saad')
       ..setDefaultFocusMinutes(45)
+      ..setFocusV2Enabled(true)
       ..setThemeMode(ThemeMode.dark);
     await tester.pump();
 
@@ -357,6 +375,7 @@ void main() {
 
     expect(notifier.state.userName, '');
     expect(settings().defaultFocusMinutes, 25);
+    expect(settings().focusV2Enabled, isFalse);
     expect(settings().themeMode, ThemeMode.system);
     expect(find.text('Settings reset to defaults'), findsOneWidget);
   });

@@ -41,12 +41,16 @@ class FloatingNav extends StatelessWidget {
     required this.selectedIndex,
     required this.onSelected,
     required this.onNewTask,
+    this.showNewTask = true,
   });
 
   final List<FloatingNavDestination> destinations;
   final int selectedIndex;
   final ValueChanged<int> onSelected;
   final VoidCallback onNewTask;
+
+  /// Whether the round New task button sits beside the pill.
+  final bool showNewTask;
 
   @override
   Widget build(BuildContext context) {
@@ -76,29 +80,31 @@ class FloatingNav extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: BloopSpace.x3),
-        DecoratedBox(
-          decoration: ShapeDecoration(
-            color: t.action,
-            shape: const CircleBorder(),
-            shadows: _shadows,
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            shape: const CircleBorder(),
-            child: IconButton(
-              tooltip: 'New task',
-              onPressed: onNewTask,
-              color: t.onAction,
-              iconSize: 28,
-              constraints: const BoxConstraints.tightFor(
-                width: kFloatingNavHeight,
-                height: kFloatingNavHeight,
+        if (showNewTask) ...[
+          const SizedBox(width: BloopSpace.x3),
+          DecoratedBox(
+            decoration: ShapeDecoration(
+              color: t.action,
+              shape: const CircleBorder(),
+              shadows: _shadows,
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              shape: const CircleBorder(),
+              child: IconButton(
+                tooltip: 'New task',
+                onPressed: onNewTask,
+                color: t.onAction,
+                iconSize: 28,
+                constraints: const BoxConstraints.tightFor(
+                  width: kFloatingNavHeight,
+                  height: kFloatingNavHeight,
+                ),
+                icon: const Icon(Icons.add),
               ),
-              icon: const Icon(Icons.add),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -175,10 +181,18 @@ class _Segment extends StatelessWidget {
 /// behind the scrim; give scrolling lists [floatingNavClearance] of bottom
 /// padding.
 class FloatingNavLayer extends StatelessWidget {
-  const FloatingNavLayer({super.key, required this.child, required this.nav});
+  const FloatingNavLayer({
+    super.key,
+    required this.child,
+    required this.nav,
+    this.showNav = true,
+  });
 
   final Widget child;
   final Widget nav;
+
+  /// False hides the nav and its scrim, leaving only [child].
+  final bool showNav;
 
   @override
   Widget build(BuildContext context) {
@@ -188,34 +202,36 @@ class FloatingNavLayer extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         child,
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: kFloatingNavScrimHeight + inset,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  // Fade from the same colour at zero alpha, not from
-                  // transparent black, which would muddy the gradient.
-                  colors: [surface.withValues(alpha: 0), surface],
-                  stops: const [0, 0.72],
+        if (showNav) ...[
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: kFloatingNavScrimHeight + inset,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    // Fade from the same colour at zero alpha, not from
+                    // transparent black, which would muddy the gradient.
+                    colors: [surface.withValues(alpha: 0), surface],
+                    stops: const [0, 0.72],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          left: BloopSpace.x4,
-          right: BloopSpace.x4,
-          bottom: kFloatingNavBottomMargin + inset,
-          // Shrinks the group rather than overflowing on narrow screens or
-          // at large text scales.
-          child: FittedBox(fit: BoxFit.scaleDown, child: nav),
-        ),
+          Positioned(
+            left: BloopSpace.x4,
+            right: BloopSpace.x4,
+            bottom: kFloatingNavBottomMargin + inset,
+            // Shrinks the group rather than overflowing on narrow screens or
+            // at large text scales.
+            child: FittedBox(fit: BoxFit.scaleDown, child: nav),
+          ),
+        ],
       ],
     );
   }
