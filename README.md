@@ -28,7 +28,7 @@ Because of the short build time, the app is **not fully furnished** and intentio
 - Mark tasks as completed
 - Completed tasks are removed from the main list but stored separately
 - Clean and minimal UI
-- Fully offline
+- Works offline; the optional Focus sounds and scenery are downloaded the first time you pick them (after asking)
 - Local data persistence
 
 ---

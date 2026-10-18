@@ -8,31 +8,69 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 
+import '../../models/remote_asset.dart';
 import '../../models/task.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../services/focus_foreground_task.dart';
 import '../../services/notif_service.dart';
+import '../../services/remote_asset_service.dart';
 import '../../services/storage_service.dart';
 
 final focusControllerProvider = ChangeNotifierProvider<FocusController>((ref) {
   return FocusController(ref: ref);
 });
 
-const Map<String, String> focusSoundAssets = {
-  'Soft Chime': 'assets/audio/ambient_1.mp3',
-  'Rain Drop': 'assets/audio/rain_1.mp3',
-  'White Noise': 'assets/audio/white_noise.mp3',
-  'Forest Bell': 'assets/audio/forest.mp3',
-  'Fireplace': 'assets/audio/fireplace_1.mp3',
-  'Piano Drift': 'assets/audio/piano_1.mp3',
-  'Thunder': 'assets/audio/rain_thunder.wav',
+/// The picker's choice for playing nothing. Not a download, and the default.
+const String noSoundName = 'No sound';
+
+/// Sounds for the old Focus screen. Downloaded when first picked, not bundled.
+const Map<String, RemoteAsset> focusSoundAssets = {
+  'Soft Chime': RemoteAsset.audio(
+    path: 'audio/ambient_1.mp3',
+    label: 'Soft Chime',
+    sizeBytes: 3967200,
+  ),
+  'Rain Drop': RemoteAsset.audio(
+    path: 'audio/rain_1.mp3',
+    label: 'Rain Drop',
+    sizeBytes: 3477420,
+  ),
+  'White Noise': RemoteAsset.audio(
+    path: 'audio/white_noise.mp3',
+    label: 'White Noise',
+    sizeBytes: 1217280,
+  ),
+  'Forest Bell': RemoteAsset.audio(
+    path: 'audio/forest.mp3',
+    label: 'Forest Bell',
+    sizeBytes: 6815242,
+  ),
+  'Fireplace': RemoteAsset.audio(
+    path: 'audio/fireplace_1.mp3',
+    label: 'Fireplace',
+    sizeBytes: 9511915,
+  ),
+  'Piano Drift': RemoteAsset.audio(
+    path: 'audio/piano_1.mp3',
+    label: 'Piano Drift',
+    sizeBytes: 2564640,
+  ),
+  'Thunder': RemoteAsset.audio(
+    path: 'audio/rain_thunder.wav',
+    label: 'Thunder',
+    sizeBytes: 5116330,
+  ),
 };
 
 class FocusController extends ChangeNotifier {
-  FocusController({required Ref ref, NotifService? notifService})
-    : _ref = ref,
-      _notifService = notifService ?? NotifService() {
+  FocusController({
+    required Ref ref,
+    NotifService? notifService,
+    RemoteAssetService? remoteAssets,
+  }) : _ref = ref,
+       _notifService = notifService ?? NotifService(),
+       _remoteAssets = remoteAssets ?? ref.read(remoteAssetServiceProvider) {
     final settings = _ref.read(settingsProvider);
     _focusSessionNotificationsEnabled =
         settings.focusSessionNotificationsEnabled;
@@ -114,6 +152,7 @@ class FocusController extends ChangeNotifier {
   final Ref _ref;
 
   final NotifService _notifService;
+  final RemoteAssetService _remoteAssets;
   final _FocusAudioEngine _audioEngine = _FocusAudioEngine();
   Timer? _timer;
   Timer? _notificationTimer;
@@ -162,7 +201,7 @@ class FocusController extends ChangeNotifier {
   bool _soundsEnabled = true;
   bool _sceneryEnabled = true;
   bool _allowOverrides = false;
-  String _selectedSound = 'Soft Chime';
+  String _selectedSound = noSoundName;
   String _selectedScenery = 'Aurora';
 
   bool get isInitializing => _isInitializing;
@@ -795,12 +834,13 @@ class FocusController extends ChangeNotifier {
       return;
     }
     if (_isRunning) {
-      final asset = focusSoundAssets[_selectedSound] ??
-          (focusSoundAssets.isNotEmpty ? focusSoundAssets.values.first : '');
-      if (asset.isEmpty) {
+      // Played only once downloaded; the picker is where the user is asked.
+      final asset = focusSoundAssets[_selectedSound];
+      final file = asset == null ? null : _remoteAssets.cachedFile(asset);
+      if (file == null) {
         unawaited(_audioEngine.stop());
       } else {
-        unawaited(_audioEngine.playLoop(asset, restart: restart));
+        unawaited(_audioEngine.playLoop(file.path, restart: restart));
       }
       return;
     }
@@ -879,16 +919,16 @@ class _FocusAudioEngine {
   final AudioPlayer _player = AudioPlayer();
   String? _currentAsset;
 
-  Future<void> playLoop(String assetPath, {bool restart = false}) async {
-    final bool shouldChangeSource = restart || _currentAsset != assetPath;
+  Future<void> playLoop(String filePath, {bool restart = false}) async {
+    final bool shouldChangeSource = restart || _currentAsset != filePath;
 
     if (shouldChangeSource && _player.playing) {
       await _player.stop();
     }
 
     if (shouldChangeSource) {
-      _currentAsset = assetPath;
-      await _player.setAudioSource(AudioSource.asset(assetPath));
+      _currentAsset = filePath;
+      await _player.setAudioSource(AudioSource.file(filePath));
     }
     await _player.setLoopMode(LoopMode.one);
     if (!_player.playing) {
