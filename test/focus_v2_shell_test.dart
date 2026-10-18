@@ -159,11 +159,12 @@ void main() {
       expect(newTask, findsOneWidget);
       expect(focus.isRunning, isTrue);
 
-      // Back on the Focus tab the running screen is still there.
+      // Back on the Focus tab the running screen is still there. While a
+      // session runs, the Focus segment shows the time left instead of its label.
       await tester.tap(
         find.descendant(
           of: find.byType(FloatingNav),
-          matching: find.text('Focus'),
+          matching: find.textContaining(':'),
         ),
       );
       await tester.pumpAndSettle();
