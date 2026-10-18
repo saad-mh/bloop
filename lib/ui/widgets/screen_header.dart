@@ -9,11 +9,15 @@ class ScreenHeader extends StatelessWidget {
   const ScreenHeader({
     super.key,
     required this.title,
+    this.titleStyle,
     this.leading,
     this.actions = const [],
   });
 
   final String title;
+
+  /// Overrides the default headline style, e.g. a smaller size for a long title.
+  final TextStyle? titleStyle;
   final Widget? leading;
   final List<Widget> actions;
 
@@ -39,7 +43,8 @@ class ScreenHeader extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style:
+                      titleStyle ?? Theme.of(context).textTheme.headlineMedium,
                 ),
               ),
             ),
