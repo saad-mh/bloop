@@ -15,6 +15,9 @@ import '../widgets/tag_pill.dart';
 import 'focus_controller.dart';
 import 'focus_widgets.dart' show FocusInk, FocusTimerDial;
 
+/// The time the Ready screen judges "now" and "soon" by. Tests replace it.
+final focusClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
 /// The redesigned Focus tab. One of three states: Ready (pick a task and
 /// start), Running (the task, the time and three controls) and Time's up (is
 /// the task finished?). No breaks, no session counts.
@@ -120,7 +123,7 @@ class _ReadyState extends ConsumerState<_Ready> {
   String? _pickedId;
 
   Future<void> _pick(List<Task> candidates, Task? current) async {
-    final now = DateTime.now();
+    final now = ref.read(focusClockProvider)();
     final chosen = await showModalBottomSheet<Task>(
       context: context,
       showDragHandle: true,
@@ -177,7 +180,7 @@ class _ReadyState extends ConsumerState<_Ready> {
     final controller = ref.watch(focusControllerProvider);
     final tokens = BloopTokens.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final now = DateTime.now();
+    final now = ref.watch(focusClockProvider)();
     final tasks = ref.watch(taskListProvider).valueOrNull ?? const <Task>[];
     final candidates = focusCandidates(tasks, now);
     final chosen =

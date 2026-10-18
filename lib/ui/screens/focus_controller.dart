@@ -30,7 +30,9 @@ const Map<String, String> focusSoundAssets = {
 };
 
 class FocusController extends ChangeNotifier {
-  FocusController({required Ref ref}) : _ref = ref {
+  FocusController({required Ref ref, NotifService? notifService})
+    : _ref = ref,
+      _notifService = notifService ?? NotifService() {
     final settings = _ref.read(settingsProvider);
     _focusSessionNotificationsEnabled =
         settings.focusSessionNotificationsEnabled;
@@ -105,7 +107,7 @@ class FocusController extends ChangeNotifier {
 
   final Ref _ref;
 
-  final NotifService _notifService = NotifService();
+  final NotifService _notifService;
   final _FocusAudioEngine _audioEngine = _FocusAudioEngine();
   Timer? _timer;
   Timer? _notificationTimer;
@@ -434,6 +436,10 @@ class FocusController extends ChangeNotifier {
     _persistUiPrefs();
     _safeNotify();
   }
+
+  /// Ends the running session as if its time had run out.
+  @visibleForTesting
+  void finishNowForTest() => _handleSessionComplete(DateTime.now().toUtc());
 
   void _handleSessionComplete(DateTime nowUtc) {
     _stopUiTimer();
