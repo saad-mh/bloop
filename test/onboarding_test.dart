@@ -233,6 +233,59 @@ void main() {
       expect(onboarding, findsOneWidget);
     });
 
+    group('small screen with the keyboard open', () {
+      // A 320x568dp phone with a 270dp keyboard.
+      const keyboard = 270.0;
+      const visibleBottom = 568.0 - keyboard;
+
+      Future<void> openKeyboard(WidgetTester tester) async {
+        tester.view.physicalSize = const Size(960, 1704);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+        await tester.tap(find.byType(TextField));
+        tester.view.viewInsets = const FakeViewPadding(bottom: keyboard * 3);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+      }
+
+      Finder nextButton(String label) => find.ancestor(
+        of: find.text(label),
+        matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+      );
+
+      testWidgets('the name field and Next stay above it', (tester) async {
+        await pumpGate(tester);
+
+        await openKeyboard(tester);
+
+        expect(
+          tester.getRect(find.byType(TextField)).bottom,
+          lessThanOrEqualTo(visibleBottom),
+        );
+        expect(
+          tester.getRect(nextButton('Next')).bottom,
+          lessThanOrEqualTo(visibleBottom),
+        );
+      });
+
+      testWidgets('the tag field and Finish stay above it', (tester) async {
+        await pumpGate(tester);
+        await toTagsStep(tester);
+
+        await openKeyboard(tester);
+
+        expect(
+          tester.getRect(find.byType(TextField)).bottom,
+          lessThanOrEqualTo(visibleBottom),
+        );
+        expect(
+          tester.getRect(nextButton('Finish')).bottom,
+          lessThanOrEqualTo(visibleBottom),
+        );
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     group('tags', () {
       testWidgets('an empty name is refused', (tester) async {
         await pumpGate(tester);

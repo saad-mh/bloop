@@ -114,6 +114,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               Expanded(
                 child: AnimatedSwitcher(
                   duration: reduceMotion ? Duration.zero : _transition,
+                  // The default centres a step that is shorter than the area.
+                  layoutBuilder: (current, previous) => Stack(
+                    fit: StackFit.expand,
+                    alignment: Alignment.topCenter,
+                    children: [...previous, ?current],
+                  ),
                   child: SingleChildScrollView(
                     key: ValueKey(_step),
                     keyboardDismissBehavior:
