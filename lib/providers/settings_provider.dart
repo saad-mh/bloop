@@ -22,6 +22,7 @@ class SettingsState {
     this.lastTabIndex = 0,
     this.userName = '',
     this.defaultFocusMinutes = defaultFocusMinutesFallback,
+    this.focusV2Enabled = false,
   });
 
   /// Focus length until the user picks one.
@@ -48,6 +49,9 @@ class SettingsState {
   /// Length of a focus session started without choosing one, in minutes.
   final int defaultFocusMinutes;
 
+  /// Shows the redesigned Focus tab: pick a task, one timer, three controls.
+  final bool focusV2Enabled;
+
   SettingsState copyWith({
     int? defaultReminderMinutes,
     int? defaultTaskTimeOffsetMinutes,
@@ -62,6 +66,7 @@ class SettingsState {
     int? lastTabIndex,
     String? userName,
     int? defaultFocusMinutes,
+    bool? focusV2Enabled,
   }) {
     return SettingsState(
       defaultReminderMinutes:
@@ -82,6 +87,7 @@ class SettingsState {
       lastTabIndex: lastTabIndex ?? this.lastTabIndex,
       userName: userName ?? this.userName,
       defaultFocusMinutes: defaultFocusMinutes ?? this.defaultFocusMinutes,
+      focusV2Enabled: focusV2Enabled ?? this.focusV2Enabled,
     );
   }
 }
@@ -133,6 +139,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         defaultFocusMinutes: _validFocusMinutes(
           box.get('defaultFocusMinutes') as int?,
         ),
+        focusV2Enabled: box.get('focusV2Enabled') as bool? ?? false,
       );
       SharedPreferences.getInstance().then((prefs) {
         prefs.setBool(
@@ -254,6 +261,14 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     } catch (_) {}
   }
 
+  void setFocusV2Enabled(bool value) {
+    state = state.copyWith(focusV2Enabled: value);
+    try {
+      final box = Hive.box(StorageService.settingsBoxName);
+      box.put('focusV2Enabled', value);
+    } catch (_) {}
+  }
+
   /// A stored length, or the fallback when it is missing or out of range.
   static int _validFocusMinutes(int? stored) {
     if (stored == null || stored < 1 || stored > SettingsState.maxFocusMinutes) {
@@ -277,6 +292,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     'seedColor',
     'userName',
     'defaultFocusMinutes',
+    'focusV2Enabled',
   ];
 
   void resetDefaults() {

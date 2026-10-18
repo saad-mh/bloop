@@ -194,27 +194,44 @@ class _AppShellState extends ConsumerState<AppShell>
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(settingsProvider);
+    final settings = ref.watch(settingsProvider);
     final index = ref.watch(selectedTabProvider);
     final focusController = ref.watch(focusControllerProvider);
-    final isFullScreen = focusController.isFullScreenActive;
+    final v2 = settings.focusV2Enabled;
+    final onFocusTab = index == focusTabIndex;
+    // The new Focus screen takes over while a session runs or is waiting for
+    // an answer; back minimises it to Tasks instead of leaving the app.
+    final v2Takeover =
+        v2 &&
+        onFocusTab &&
+        (focusController.isSessionActive || focusController.isFinished);
+    final isFullScreen = !v2 && focusController.isFullScreenActive;
     final pages = IndexedStack(
       index: index,
       children: [for (final tab in _tabs) tab.page],
     );
-    return Scaffold(
-      body: isFullScreen
-          ? pages
-          : FloatingNavLayer(
-              nav: FloatingNav(
-                destinations: [for (final tab in _tabs) tab.destination],
-                selectedIndex: index,
-                onSelected: _selectTab,
-                onNewTask: _openNewTask,
+    return PopScope(
+      canPop: !v2Takeover,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) ref.read(selectedTabProvider.notifier).select(tasksTabIndex);
+      },
+      child: Scaffold(
+        body: isFullScreen
+            ? pages
+            : FloatingNavLayer(
+                showNav: !v2Takeover,
+                nav: FloatingNav(
+                  destinations: [for (final tab in _tabs) tab.destination],
+                  selectedIndex: index,
+                  onSelected: _selectTab,
+                  onNewTask: _openNewTask,
+                  // Nothing to add from the new Focus tab.
+                  showNewTask: !(v2 && onFocusTab),
+                ),
+                // Top safe area only: the list runs behind the nav and scrim.
+                child: SafeArea(bottom: false, child: pages),
               ),
-              // Top safe area only: the list runs behind the nav and scrim.
-              child: SafeArea(bottom: false, child: pages),
-            ),
+      ),
     );
   }
 }

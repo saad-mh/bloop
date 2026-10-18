@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/settings_provider.dart';
 import 'focus_controller.dart';
+import 'focus_v2_widgets.dart';
 import 'focus_widgets.dart';
 
 class FocusScreen extends ConsumerStatefulWidget {
@@ -57,13 +59,15 @@ class _FocusScreenState extends ConsumerState<FocusScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isFullScreen = ref.watch(
-      focusControllerProvider.select((c) => c.isFullScreenActive),
-    );
+    final v2 = ref.watch(settingsProvider.select((s) => s.focusV2Enabled));
+    // The new screen leaves the system bars alone.
+    final isFullScreen =
+        !v2 &&
+        ref.watch(focusControllerProvider.select((c) => c.isFullScreenActive));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateSystemUi(isFullScreen);
     });
-    // The card draws its own header, so the screen is just a backdrop.
-    return const Scaffold(body: PomodoroCard());
+    // Both views draw their own header, so the screen is just a backdrop.
+    return Scaffold(body: v2 ? const FocusV2View() : const PomodoroCard());
   }
 }

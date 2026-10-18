@@ -56,6 +56,10 @@ class SettingsScreenController {
     _ref.read(settingsProvider.notifier).setDefaultFocusMinutes(minutes);
   }
 
+  void setFocusV2Enabled(bool value) {
+    _ref.read(settingsProvider.notifier).setFocusV2Enabled(value);
+  }
+
   void resetDefaults() {
     _ref.read(settingsProvider.notifier).resetDefaults();
   }

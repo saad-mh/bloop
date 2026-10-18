@@ -18,8 +18,8 @@ const double _kDialSize = 260;
 /// Colours for text and the ring. On the full-screen session they sit over
 /// the scenery or a dimmed scrim, so they stay light whatever the theme.
 @immutable
-class _FocusInk {
-  const _FocusInk({
+class FocusInk {
+  const FocusInk({
     required this.ink,
     required this.muted,
     required this.track,
@@ -29,10 +29,10 @@ class _FocusInk {
   final Color muted;
   final Color track;
 
-  factory _FocusInk.themed(BloopTokens t) =>
-      _FocusInk(ink: t.ink, muted: t.muted, track: t.border);
+  factory FocusInk.themed(BloopTokens t) =>
+      FocusInk(ink: t.ink, muted: t.muted, track: t.border);
 
-  static const onScene = _FocusInk(
+  static const onScene = FocusInk(
     ink: Color(0xFFFFFFFF),
     muted: Color(0xC7FFFFFF),
     track: Color(0x40FFFFFF),
@@ -136,7 +136,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
   Widget _buildIdle(BuildContext context, FocusController controller) {
     final tokens = BloopTokens.of(context);
     final textTheme = Theme.of(context).textTheme;
-    final ink = _FocusInk.themed(tokens);
+    final ink = FocusInk.themed(tokens);
     final canStart = !controller.isRunning;
     return Column(
       children: [
@@ -178,7 +178,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                         showTitleWithoutTask: !controller.isFocusSession,
                       ),
                       const SizedBox(height: BloopSpace.x8),
-                      _TimerDial(
+                      FocusTimerDial(
                         remaining: controller.remaining,
                         progress: controller.progress,
                         paused:
@@ -244,7 +244,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
     // Over scenery or a dimmed scrim the text is light; on the plain
     // background it follows the theme.
     final onScene = controller.sceneryEnabled || controller.dimScreenEnabled;
-    final ink = onScene ? _FocusInk.onScene : _FocusInk.themed(tokens);
+    final ink = onScene ? FocusInk.onScene : FocusInk.themed(tokens);
     final scrim = controller.dimScreenEnabled
         ? 0.6
         : (controller.sceneryEnabled ? 0.45 : 0.0);
@@ -289,7 +289,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _TimerDial(
+                        FocusTimerDial(
                           remaining: controller.remaining,
                           progress: controller.progress,
                           paused: !controller.isRunning,
@@ -871,7 +871,7 @@ class _SessionHeading extends StatelessWidget {
   });
 
   final FocusController controller;
-  final _FocusInk ink;
+  final FocusInk ink;
   final bool showTitleWithoutTask;
 
   @override
@@ -917,18 +917,23 @@ class _SessionHeading extends StatelessWidget {
 
 /// Ring with the time left in the middle. [progress] is 0..1 of the session
 /// elapsed. A [paused] session dims the time and says so.
-class _TimerDial extends StatelessWidget {
-  const _TimerDial({
+class FocusTimerDial extends StatelessWidget {
+  const FocusTimerDial({
+    super.key,
     required this.remaining,
     required this.progress,
     required this.ink,
     this.paused = false,
+    this.caption,
   });
 
   final Duration remaining;
   final double progress;
   final bool paused;
-  final _FocusInk ink;
+
+  /// Small line under the time, replaced by "Paused" while [paused].
+  final String? caption;
+  final FocusInk ink;
 
   @override
   Widget build(BuildContext context) {
@@ -977,9 +982,9 @@ class _TimerDial extends StatelessWidget {
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-                if (paused)
+                if (paused || caption != null)
                   Text(
-                    'Paused',
+                    paused ? 'Paused' : caption!,
                     style: textTheme.bodySmall?.copyWith(
                       color: ink.muted,
                       fontWeight: FontWeight.w500,
