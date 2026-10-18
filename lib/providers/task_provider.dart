@@ -156,7 +156,21 @@ class TaskNotifier extends StateNotifier<AsyncValue<List<Task>>> {
 
   Future<void> importJson(String json) async {
     try {
-      await _storage.importFromJson(json);
+      final imported = await _storage.importFromJson(json);
+      // Exported notification ids mean nothing on a fresh install, so every
+      // open task's reminders are scheduled again.
+      for (final task in imported.where((t) => !t.isCompleted)) {
+        try {
+          final newIds = await _notifications.scheduleReminders(task);
+          if (newIds == null) continue;
+          await _storage.upsert(task.copyWith(
+            notificationIds: newIds,
+            notificationId: newIds.isNotEmpty ? newIds.first : null,
+          ));
+        } catch (_) {
+          // One task that can't be scheduled shouldn't stop the import.
+        }
+      }
       await load();
     } catch (e, st) {
       state = AsyncValue.error(e, st);

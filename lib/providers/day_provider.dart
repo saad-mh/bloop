@@ -38,8 +38,8 @@ class DayNotifier extends StateNotifier<DateTime> with WidgetsBindingObserver {
   // Timers do not run while the app is suspended, so a night spent in the
   // background leaves the midnight timer unfired.
   @override
-  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
-    if (lifecycle == AppLifecycleState.resumed) _refresh();
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refresh();
   }
 
   @override

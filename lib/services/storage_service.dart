@@ -91,12 +91,21 @@ class StorageService {
     return jsonEncode(data);
   }
 
-  Future<void> importFromJson(String json) async {
+  /// Stores the tasks in [json] and returns them. Exports carry tasks only, so
+  /// the tags they use are added to the tag list, which is what the filter
+  /// chips and Settings read.
+  Future<List<Task>> importFromJson(String json) async {
     final decoded = jsonDecode(json) as List<dynamic>;
+    final imported = <Task>[];
     for (final item in decoded) {
       final task = Task.fromJson(item as Map<String, dynamic>);
       await _box.put(task.id, task);
+      imported.add(task);
     }
+    for (final tag in {for (final t in imported) ...t.tags}) {
+      await addTag(tag);
+    }
+    return imported;
   }
 
   List<String> getTags() => _tagsBox.values.toList()..sort();
