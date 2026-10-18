@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/storage_service.dart';
@@ -68,23 +69,32 @@ class OnboardingNotifier extends StateNotifier<bool> {
         _ref.read(settingsProvider.notifier).setUserName(name);
       }
 
-      final example = buildExampleTask(
-        DateTime.now(),
-        tag: created.isEmpty ? null : created.first,
-      );
-      // Saved directly rather than through the task list's addOrUpdate: that
-      // schedules reminders, which asks Android for notification permission,
-      // and the example has none. The permission prompt is not part of
-      // onboarding.
-      await _storage.upsert(example);
+      // An earlier try that got this far already left the example behind;
+      // adding another would orphan it, with no confetti when completed.
+      final leftBehind = _storage.onboardingExampleTaskId;
+      if (leftBehind == null || _storage.getById(leftBehind) == null) {
+        final example = buildExampleTask(
+          DateTime.now(),
+          tag: created.isEmpty ? null : created.first,
+        );
+        // The id is stored first, so a failure after the task is saved still
+        // leaves it known. Saved directly rather than through the task list's
+        // addOrUpdate: that schedules reminders, which asks Android for
+        // notification permission, and the example has none. The permission
+        // prompt is not part of onboarding.
+        await _storage.setOnboardingExampleTaskId(example.id);
+        await _storage.upsert(example);
+        _ref.read(exampleTaskIdProvider.notifier).state = example.id;
+      } else {
+        _ref.read(exampleTaskIdProvider.notifier).state = leftBehind;
+      }
       await _ref.read(taskListProvider.notifier).load();
-      await _storage.setOnboardingExampleTaskId(example.id);
-      _ref.read(exampleTaskIdProvider.notifier).state = example.id;
 
       await _storage.markOnboardingComplete();
       state = true;
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Onboarding finish failed: $e\n$st');
       return false;
     }
   }

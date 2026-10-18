@@ -27,17 +27,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   final _nameController = TextEditingController();
   final _tagController = TextEditingController();
+  final _tagFocus = FocusNode();
   final _tags = <String>[];
   TagNameError? _tagError;
   int _step = 0;
   bool _saving = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Skip is only offered while there is nothing to lose by taking it.
+    _nameController.addListener(() => setState(() {}));
+    _tagController.addListener(() => setState(() {}));
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _tagController.dispose();
+    _tagFocus.dispose();
     super.dispose();
   }
+
+  /// Whether the current step holds something entered by the user.
+  bool get _hasInput => _step == 0
+      ? _nameController.text.trim().isNotEmpty
+      : _tags.isNotEmpty || _tagController.text.trim().isNotEmpty;
 
   void _next() {
     if (_saving) return;
@@ -55,20 +70,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     setState(() => _step--);
   }
 
-  /// Drops what was entered on the current step and moves on.
-  void _skip() {
-    if (_saving) return;
-    if (_step == 0) {
-      _nameController.clear();
-    } else {
-      _tags.clear();
-      _tagController.clear();
-      _tagError = null;
-    }
-    _next();
-  }
-
   Future<void> _finish() async {
+    // A tag typed but not yet added still counts; one that can't be added is
+    // shown as an error rather than dropped.
+    final pending = _tagController.text;
+    if (pending.trim().isNotEmpty) {
+      final error = validateTagName(pending, _tags);
+      if (error != null) {
+        setState(() => _tagError = error);
+        return;
+      }
+      _tags.add(pending.trim());
+      _tagController.clear();
+    }
     FocusScope.of(context).unfocus();
     setState(() => _saving = true);
     final done = await ref
@@ -91,6 +105,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _tagController.clear();
       }
     });
+    // Done closes the keyboard; stay in the field to add the next tag.
+    _tagFocus.requestFocus();
   }
 
   void _removeTag(String tag) => setState(() => _tags.remove(tag));
@@ -122,6 +138,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                   child: SingleChildScrollView(
                     key: ValueKey(_step),
+                    // Both steps are on screen while they cross-fade, and a
+                    // primary scroll view would attach each to the same
+                    // controller.
+                    primary: false,
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
                     padding: const EdgeInsets.fromLTRB(
@@ -157,10 +177,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                             child: const Text('Back'),
                           ),
                         const Spacer(),
-                        TextButton(
-                          onPressed: _saving ? null : _skip,
-                          child: Text(lastStep ? 'Skip tags' : 'Skip'),
-                        ),
+                        if (!_hasInput)
+                          TextButton(
+                            onPressed: _saving ? null : _next,
+                            child: Text(lastStep ? 'Skip tags' : 'Skip'),
+                          ),
                       ],
                     ),
                   ],
@@ -231,6 +252,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             Expanded(
               child: TextField(
                 controller: _tagController,
+                focusNode: _tagFocus,
                 textCapitalization: TextCapitalization.none,
                 textInputAction: TextInputAction.done,
                 onChanged: (_) {

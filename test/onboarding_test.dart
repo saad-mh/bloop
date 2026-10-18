@@ -193,12 +193,21 @@ void main() {
     testWidgets('the name can be skipped', (tester) async {
       await pumpGate(tester);
 
-      await tester.enterText(find.byType(TextField), 'Typed then skipped');
       await tapButton(tester, 'Skip');
       await tapButton(tester, 'Finish');
 
       expect(settingsBox.containsKey('userName'), isFalse);
       expect(find.byType(HomeScreen), findsOneWidget);
+    });
+
+    testWidgets('Skip is not offered once a name is typed', (tester) async {
+      await pumpGate(tester);
+      expect(find.text('Skip'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'Saad');
+      await tester.pump();
+
+      expect(find.text('Skip'), findsNothing);
     });
 
     testWidgets('Next with an empty name also moves on', (tester) async {
@@ -337,6 +346,23 @@ void main() {
         expect(
           tester.widget<TextField>(find.byType(TextField)).controller!.text,
           isEmpty,
+        );
+      });
+
+      testWidgets('the field keeps focus so the next tag can be typed', (
+        tester,
+      ) async {
+        await pumpGate(tester);
+        await toTagsStep(tester);
+
+        await tester.enterText(find.byType(TextField), 'gym');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const ValueKey('tag-gym')), findsOneWidget);
+        expect(
+          tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+          isTrue,
         );
       });
 
@@ -504,12 +530,24 @@ void main() {
         expect(find.text('Today'), findsOneWidget);
       });
 
+      testWidgets('Skip tags is not offered once a tag is added', (
+        tester,
+      ) async {
+        await pumpGate(tester);
+        await toTagsStep(tester);
+        expect(find.text('Skip tags'), findsOneWidget);
+
+        await addTag(tester, 'gym');
+
+        // Skipping would throw the tag away, so only Finish remains.
+        expect(find.text('Skip tags'), findsNothing);
+      });
+
       testWidgets('skipping tags still adds an untagged example', (
         tester,
       ) async {
         await pumpGate(tester);
         await toTagsStep(tester);
-        await addTag(tester, 'gym');
 
         await tapButton(tester, 'Skip tags');
 
@@ -528,6 +566,35 @@ void main() {
         expect(find.text(exampleTaskTitle), findsOneWidget);
         expect(settingsBox.get(StorageService.onboardingCompleteKey), isTrue);
         expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('a tag typed but not added is still saved', (tester) async {
+        await pumpGate(tester);
+        await toTagsStep(tester);
+
+        await tester.enterText(find.byType(TextField), '  gym ');
+        await tapButton(tester, 'Finish');
+
+        expect(storage.getTags(), ['gym']);
+        expect(storage.getAll().single.tags, ['gym']);
+      });
+
+      testWidgets('a typed tag that is refused stops Finish and says why', (
+        tester,
+      ) async {
+        await pumpGate(tester);
+        await toTagsStep(tester);
+        await addTag(tester, 'gym');
+
+        await tester.enterText(find.byType(TextField), 'GYM');
+        await tapButton(tester, 'Finish');
+
+        expect(
+          find.text('A tag with that name already exists'),
+          findsOneWidget,
+        );
+        expect(onboarding, findsOneWidget);
+        expect(tasksBox, isEmpty);
       });
 
       testWidgets('is not shown again on the next launch', (tester) async {
@@ -598,6 +665,32 @@ void main() {
     });
 
     group('confetti on Home', () {
+      testWidgets('shows over the Focus tab too', (tester) async {
+        await pumpGate(tester);
+        await tapButton(tester, 'Next');
+        await tapButton(tester, 'Finish');
+        await tester.tap(find.text('Focus'));
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ConfettiWidget)),
+        );
+
+        // As when the session on the Focus tab is marked done.
+        await container
+            .read(taskListProvider.notifier)
+            .toggleComplete(storage.getAll().single, value: true);
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<ConfettiWidget>(find.byType(ConfettiWidget))
+              .confettiController
+              .state,
+          ConfettiControllerState.playing,
+        );
+        await tester.pumpAndSettle();
+      });
+
       testWidgets('completing the example fires confetti, once', (
         tester,
       ) async {
@@ -638,6 +731,38 @@ void main() {
         expect(confetti().state, ConfettiControllerState.stopped);
         await tester.pumpAndSettle();
       });
+    });
+  });
+
+  group('finish retried', () {
+    test('reuses the example an earlier try left behind', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(onboardingProvider.notifier);
+
+      expect(await notifier.finish(), isTrue);
+      final first = storage.getAll().single;
+      // As if a later step had failed and the user tapped Finish again.
+      expect(await notifier.finish(), isTrue);
+
+      expect(storage.getAll().map((t) => t.id), [first.id]);
+      expect(storage.onboardingExampleTaskId, first.id);
+      expect(container.read(exampleTaskIdProvider), first.id);
+    });
+
+    test('makes a new example when the stored one is gone', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final notifier = container.read(onboardingProvider.notifier);
+      await notifier.finish();
+      final first = storage.getAll().single;
+      await storage.delete(first.id);
+
+      expect(await notifier.finish(), isTrue);
+
+      final second = storage.getAll().single;
+      expect(second.id, isNot(first.id));
+      expect(storage.onboardingExampleTaskId, second.id);
     });
   });
 

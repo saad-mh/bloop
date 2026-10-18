@@ -39,7 +39,9 @@ class StorageService {
     if (stored != null) return stored;
     final existingUser =
         _box.isNotEmpty || _tagsBox.isNotEmpty || _settingsBox.isNotEmpty;
-    if (existingUser) markOnboardingComplete();
+    // Not awaited, and a failed write is safe to drop: this decides the same
+    // way on the next launch.
+    if (existingUser) markOnboardingComplete().catchError((_) {});
     return existingUser;
   }
 
@@ -57,8 +59,8 @@ class StorageService {
 
   Task? getById(String id) => _box.get(id);
 
-  List<Task> getAll() =>
-      _box.values.toList()..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  List<Task> getAll() => _box.values.toList()
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
   Future<void> upsert(Task task) async {
     task.updatedAt = DateTime.now().toUtc();
