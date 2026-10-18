@@ -23,13 +23,26 @@ Because of the short build time, the app is **not fully furnished** and intentio
 ## Current Features
 
 - Create, edit, and delete tasks
-- Optional date and time for tasks
+- Optional date and time, with reminders
 - Priority levels (Low / Medium / High)
-- Mark tasks as completed
-- Completed tasks are removed from the main list but stored separately
-- Clean and minimal UI
+- Home list grouped into Overdue, Today, Upcoming, Whenever and Completed
+- Tags, with filter chips on the home screen and tag management in Settings
+- Tap a task to Focus on it, snooze it for an hour, or move it to tomorrow
+- A Focus timer with optional sounds and scenery
+- Light and dark themes in a clean monochrome design
 - Works offline; the optional Focus sounds and scenery are downloaded the first time you pick them (after asking)
-- Local data persistence
+- Local data persistence, with export and import as JSON
+
+---
+
+## Screenshots
+
+<p>
+  <img src="docs/screenshots/home.png" width="24%" alt="Home list grouped by Overdue, Today, Upcoming and Whenever">
+  <img src="docs/screenshots/home-dark.png" width="24%" alt="Home list in dark mode">
+  <img src="docs/screenshots/focus.png" width="24%" alt="Focus timer">
+  <img src="docs/screenshots/settings.png" width="24%" alt="Settings">
+</p>
 
 ---
 
@@ -38,8 +51,9 @@ Because of the short build time, the app is **not fully furnished** and intentio
 The following are the features planned:
 
 - [x] Notifications / reminders
-- [ ] Tags page and tag-based filtering
-- [ ] Focus elements
+- [x] Tags and tag-based filtering
+- [x] Focus elements
+- [ ] Colour (tag colours and accent colours), tracked in [#16](https://github.com/saad-mh/bloop/issues/16)
 
 
 Everything else in the app works as intended.
@@ -79,11 +93,23 @@ There is no fixed roadmap or release schedule.
 
 ## Download
 
-Signed APK builds will be provided here.
+Signed APKs are attached to each [release](https://github.com/saad-mh/bloop/releases/latest). Bloop is Android only, and needs Android 7.0 or newer.
 
-| Version | Platform | Release Link |
-|-------|---------|---------------|
-| v1.0.3 | Android | _[Bloop](https://github.com/saad-mh/bloop/releases/latest)_ |
+**Which file do I install?**
+
+| If you are... | Install | Size |
+|---|---|---|
+| Not sure, or just want it to work | `bloop-2.0.0-universal.apk` | about 61 MB |
+| On a modern phone (almost every phone since about 2017) | `bloop-2.0.0-arm64-v8a.apk` | about 23 MB |
+| On an old or low-end 32-bit phone | `bloop-2.0.0-armeabi-v7a.apk` | about 21 MB |
+| Running an Android emulator on a PC | `bloop-2.0.0-x86_64.apk` | about 25 MB |
+
+The universal file contains all of the others and works on any device, so it is the safe choice. The smaller ones are the same app with only the parts your phone uses.
+If you picked one that doesn't fit your phone, Android says "App not compatible" and nothing breaks; try the universal one.
+
+Verify a download against `SHA256SUMS.txt` on the release page if you like.
+
+Updating from 1.x? 2.0.0 is signed with a new key, so Android won't install it over 1.x. Use Settings > Advanced > Export data in 1.x first, uninstall it, install 2.0.0, then use Import data.
 
 ---
 
