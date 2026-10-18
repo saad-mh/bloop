@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -122,6 +124,23 @@ class _ReadyState extends ConsumerState<_Ready> {
   /// The task chosen in the list; null until the user picks one.
   String? _pickedId;
 
+  /// Re-reads the clock so "soon" and "late" move on while the tab sits open.
+  Timer? _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _clock?.cancel();
+    super.dispose();
+  }
+
   Future<void> _pick(List<Task> candidates, Task? current) async {
     final now = ref.read(focusClockProvider)();
     final chosen = await showModalBottomSheet<Task>(
@@ -185,7 +204,7 @@ class _ReadyState extends ConsumerState<_Ready> {
     final candidates = focusCandidates(tasks, now);
     final chosen =
         candidates.where((t) => t.id == _pickedId).firstOrNull ??
-        defaultFocusTask(tasks, now);
+        defaultFocusTaskFrom(candidates, now);
 
     return Column(
       children: [
@@ -287,7 +306,10 @@ class _TaskSelector extends StatelessWidget {
     final tag = task.tags.firstOrNull;
     return Semantics(
       button: onTap != null,
-      label: 'Task: ${task.title}',
+      label:
+          'Task: ${task.title}'
+          '${dueText.isEmpty ? '' : ', $dueText'}'
+          '${tag == null ? '' : ', tag $tag'}',
       hint: onTap == null ? null : 'Choose another task',
       excludeSemantics: true,
       child: Material(
@@ -553,7 +575,7 @@ class _TimesUp extends ConsumerWidget {
                   const SizedBox(height: BloopSpace.x6),
                   _TaskHeading(
                     caption:
-                        '${_minutes(controller.sessionLength.inMinutes)} done',
+                        '${_minutes(controller.sessionFocused.inMinutes)} done',
                     title: controller.taskTitle,
                     tag: task?.tags.firstOrNull,
                     ink: ink,

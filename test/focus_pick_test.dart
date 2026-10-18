@@ -88,12 +88,25 @@ void main() {
       expect(pick?.id, 'all day');
     });
 
-    test('is null when only overdue tasks remain', () {
+    test(
+      'offers the longest-waiting overdue task when nothing is due today',
+      () {
+        final pick = defaultFocusTask([
+          task('newer', due: DateTime(2026, 10, 16, 9)),
+          task('older', due: DateTime(2026, 10, 14, 9)),
+        ], now);
+
+        expect(pick?.id, 'older');
+      },
+    );
+
+    test('Today still beats overdue', () {
       final pick = defaultFocusTask([
         task('overdue', due: DateTime(2026, 10, 15, 9)),
+        task('evening', due: DateTime(2026, 10, 17, 20)),
       ], now);
 
-      expect(pick, isNull);
+      expect(pick?.id, 'evening');
     });
 
     test('is null with nothing to do', () {

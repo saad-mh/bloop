@@ -149,6 +149,23 @@ void main() {
       expect(c.progress, closeTo(0, 0.01));
     });
 
+    test('Time\'s up after Keep going reports the whole effort', () {
+      final c = make()
+        ..startForTask(budget)
+        ..finishNowForTest()
+        ..keepGoing();
+      expect(c.sessionFocused, const Duration(minutes: 30));
+
+      c.finishNowForTest();
+
+      expect(c.isFinished, isTrue);
+      expect(c.sessionLength, const Duration(minutes: 5));
+      expect(c.sessionFocused, const Duration(minutes: 30));
+
+      c.dismissFinished();
+      expect(c.sessionFocused, const Duration(minutes: 25));
+    });
+
     test('Close clears the task and goes back to ready', () {
       final c = make()
         ..startForTask(budget)
@@ -241,6 +258,19 @@ void main() {
       expect(c.isFocusSession, isFalse);
       expect(c.sessionLabel, 'Short break');
     });
+  });
+
+  test('switching the new screen off leaves Time\'s up', () {
+    final c = make()
+      ..startForTask(budget)
+      ..finishNowForTest();
+    expect(c.isFinished, isTrue);
+
+    settings.setFocusV2Enabled(false);
+
+    expect(c.isFinished, isFalse);
+    expect(c.isSessionActive, isFalse);
+    expect(c.taskId, isNull);
   });
 
   test('switching the new screen on leaves a break that was in progress', () {

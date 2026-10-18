@@ -41,6 +41,7 @@ class _FakeFocus extends ChangeNotifier implements FocusController {
   String? id;
   Duration left = const Duration(minutes: 25);
   Duration length = const Duration(minutes: 25);
+  Duration? focused;
 
   final started = <String>[];
   var startedFree = 0;
@@ -67,6 +68,8 @@ class _FakeFocus extends ChangeNotifier implements FocusController {
   Duration get remaining => left;
   @override
   Duration get sessionLength => length;
+  @override
+  Duration get sessionFocused => focused ?? length;
   @override
   Duration get focusDuration => const Duration(minutes: 25);
   @override
@@ -233,11 +236,23 @@ void main() {
       expect(find.text('Choose a task'), findsNothing);
     });
 
+    testWidgets('with only an overdue task, it is offered', (tester) async {
+      final focus = _FakeFocus();
+      await pump(tester, focus, tasks: [late]);
+
+      expect(find.text('UP NEXT'), findsOneWidget);
+      expect(find.text('Pay fee'), findsOneWidget);
+      expect(find.text('2 days late'), findsOneWidget);
+
+      await tester.tap(find.text('Start'));
+      expect(focus.started, ['late']);
+    });
+
     testWidgets('with nothing due, Start runs a session with no task', (
       tester,
     ) async {
       final focus = _FakeFocus();
-      await pump(tester, focus, tasks: [late]);
+      await pump(tester, focus, tasks: []);
 
       expect(find.text('UP NEXT'), findsNothing);
       expect(find.text('Focus without a task'), findsNothing);
@@ -245,6 +260,15 @@ void main() {
 
       await tester.tap(find.text('Start'));
       expect(focus.startedFree, 1);
+    });
+
+    testWidgets('the selector reads out its due time and tag', (tester) async {
+      await pump(tester, _FakeFocus());
+
+      expect(
+        find.bySemanticsLabel(RegExp(r'Task: Robotics.*3:20.*tag robotics')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('fits a small phone in both themes', (tester) async {
@@ -379,6 +403,15 @@ void main() {
       expect(find.text('Close'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reports the whole effort after Keep going', (tester) async {
+      final focus = finished()
+        ..length = const Duration(minutes: 5)
+        ..focused = const Duration(minutes: 30);
+      await pump(tester, focus);
+
+      expect(find.text('30 MINUTES DONE'), findsOneWidget);
     });
 
     testWidgets('Mark task done completes it and returns to Tasks', (
