@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import 'remote_asset.dart';
+
 enum SceneryType {
   gradient,
   image,
@@ -8,17 +10,17 @@ enum SceneryType {
 class SceneryConfig {
   final SceneryType type;
   final List<Color>? colors;
-  final String? assetPath;
+  final RemoteAsset? asset;
 
   const SceneryConfig._({
     required this.type,
     this.colors,
-    this.assetPath,
+    this.asset,
   });
 
   const SceneryConfig.gradient({required List<Color> colors})
       : this._(type: SceneryType.gradient, colors: colors);
 
-  const SceneryConfig.image({required String assetPath})
-      : this._(type: SceneryType.image, assetPath: assetPath);
+  const SceneryConfig.image({required RemoteAsset asset})
+      : this._(type: SceneryType.image, asset: asset);
 }

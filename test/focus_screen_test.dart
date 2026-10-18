@@ -14,13 +14,14 @@ class _FakeFocus extends ChangeNotifier implements FocusController {
   bool dim = false;
   bool scenery = true;
   String? task;
-  String sound = 'Soft Chime';
+  String sound = noSoundName;
   String sceneryName = 'Aurora';
   Duration left = const Duration(minutes: 25);
   int started = 0;
   int paused = 0;
   int resets = 0;
   final pickedScenery = <String>[];
+  final pickedSound = <String>[];
 
   @override
   bool get isInitializing => false;
@@ -96,6 +97,13 @@ class _FakeFocus extends ChangeNotifier implements FocusController {
   void setSelectedScenery(String value) {
     pickedScenery.add(value);
     sceneryName = value;
+    notifyListeners();
+  }
+
+  @override
+  void setSelectedSound(String value) {
+    pickedSound.add(value);
+    sound = value;
     notifyListeners();
   }
 
@@ -298,6 +306,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(focus.pickedScenery, ['Moonlight']);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('the sound picker lists No sound first, and it is the pick', (
+      tester,
+    ) async {
+      final focus = session()..sound = 'Rain Drop';
+      await pumpCard(tester, focus);
+
+      await tester.tapAt(const Offset(200, 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Sound'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Change sound'), findsOneWidget);
+      final none = tester.getTopLeft(find.text('No sound')).dy;
+      expect(none, lessThan(tester.getTopLeft(find.text('Soft Chime')).dy));
+
+      await tester.tap(find.text('No sound'));
+      await tester.pumpAndSettle();
+
+      // No download prompt for silence.
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(focus.pickedSound, ['No sound']);
       await tester.pump(const Duration(seconds: 5));
     });
 

@@ -6,10 +6,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 
 import 'focus_controller.dart';
+import '../../models/remote_asset.dart';
 import '../../models/scenery_config.dart';
+import '../../services/remote_asset_service.dart';
 import '../theme/tokens.dart';
 import '../widgets/bloop_icon_button.dart';
 import '../widgets/floating_nav.dart';
+import '../widgets/remote_asset_prompt.dart';
 import '../widgets/screen_header.dart';
 
 /// Diameter of the timer ring on the focus screen.
@@ -740,7 +743,19 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                       contentPadding: EdgeInsets.zero,
                       value: soundsEnabled,
                       title: const Text('Sounds on'),
-                      onChanged: (v) => setModalState(() => soundsEnabled = v),
+                      onChanged: (v) async {
+                        // Asks first if the chosen sound isn't downloaded.
+                        final asset = focusSoundAssets[controller.selectedSound];
+                        if (v && asset != null) {
+                          final file = await ensureRemoteAsset(
+                            context,
+                            ref,
+                            asset,
+                          );
+                          if (file == null || !context.mounted) return;
+                        }
+                        setModalState(() => soundsEnabled = v);
+                      },
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
@@ -782,11 +797,26 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
       context,
       title: 'Change sound',
       children: [
+        _PickerTile(
+          title: noSoundName,
+          selected: selected == noSoundName,
+          onTap: () {
+            selected = noSoundName;
+            Navigator.pop(context);
+          },
+        ),
         for (final name in focusSoundAssets.keys)
           _PickerTile(
             title: name,
             selected: name == selected,
-            onTap: () {
+            trailing: _downloadedMark(focusSoundAssets[name]!),
+            onTap: () async {
+              final file = await ensureRemoteAsset(
+                context,
+                ref,
+                focusSoundAssets[name]!,
+              );
+              if (file == null || !context.mounted) return;
               selected = name;
               Navigator.pop(context);
             },
@@ -812,7 +842,12 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
             title: name,
             selected: name == selected,
             leading: _SceneryThumb(config: _sceneryConfigs[name]!),
-            onTap: () {
+            onTap: () async {
+              final asset = _sceneryConfigs[name]!.asset;
+              if (asset != null) {
+                final file = await ensureRemoteAsset(context, ref, asset);
+                if (file == null || !context.mounted) return;
+              }
               selected = name;
               Navigator.pop(context);
             },
@@ -821,6 +856,14 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
     );
     controller.setSelectedScenery(selected);
     _armAutoHide();
+  }
+
+  /// A cloud icon on sounds that still have to be downloaded.
+  Widget? _downloadedMark(RemoteAsset asset) {
+    final service = ref.read(remoteAssetServiceProvider);
+    return service.isDownloaded(asset)
+        ? null
+        : const Icon(Icons.cloud_download_outlined);
   }
 
   Future<void> _showPickerSheet(
@@ -1250,6 +1293,7 @@ class _PickerTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     this.leading,
+    this.trailing,
   });
 
   final String title;
@@ -1257,12 +1301,15 @@ class _PickerTile extends StatelessWidget {
   final VoidCallback onTap;
   final Widget? leading;
 
+  /// Shown when the row isn't the selected one.
+  final Widget? trailing;
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: leading,
       title: Text(title),
-      trailing: selected ? const Icon(Icons.check) : null,
+      trailing: selected ? const Icon(Icons.check) : trailing,
       selected: selected,
       onTap: onTap,
     );
@@ -1270,14 +1317,17 @@ class _PickerTile extends StatelessWidget {
 }
 
 /// Swatch of a scenery, for the picker.
-class _SceneryThumb extends StatelessWidget {
+class _SceneryThumb extends ConsumerWidget {
   const _SceneryThumb({required this.config});
 
   final SceneryConfig config;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final tokens = BloopTokens.of(context);
+    final file = config.asset == null
+        ? null
+        : ref.watch(remoteAssetServiceProvider).cachedFile(config.asset!);
     final Widget fill = switch (config.type) {
       SceneryType.gradient => DecoratedBox(
         decoration: BoxDecoration(
@@ -1288,11 +1338,20 @@ class _SceneryThumb extends StatelessWidget {
           ),
         ),
       ),
-      SceneryType.image => Image.asset(
-        config.assetPath ?? '',
+      SceneryType.image when file != null => Image.file(
+        file,
         fit: BoxFit.cover,
         cacheWidth: 96,
         errorBuilder: (_, _, _) => ColoredBox(color: tokens.sunken),
+      ),
+      // Not downloaded yet; picking it asks first.
+      SceneryType.image => ColoredBox(
+        color: tokens.sunken,
+        child: Icon(
+          Icons.cloud_download_outlined,
+          size: 20,
+          color: tokens.muted,
+        ),
       ),
     };
     return ClipRRect(
@@ -1302,7 +1361,7 @@ class _SceneryThumb extends StatelessWidget {
   }
 }
 
-class _FocusSceneryBackground extends StatelessWidget {
+class _FocusSceneryBackground extends ConsumerWidget {
   const _FocusSceneryBackground({
     required this.tokens,
     required this.sceneryKey,
@@ -1314,16 +1373,19 @@ class _FocusSceneryBackground extends StatelessWidget {
   final bool enabled;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final config = _sceneryConfigs[sceneryKey] ?? _sceneryConfigs.values.first;
     final plain = [tokens.surface, tokens.sunken];
     if (enabled && config.type == SceneryType.image) {
-      final assetPath = config.assetPath;
-      if (assetPath != null && assetPath.isNotEmpty) {
+      // Falls back to the plain background if the picture isn't on disk.
+      final file = ref
+          .watch(remoteAssetServiceProvider)
+          .cachedFile(config.asset!);
+      if (file != null) {
         final size = MediaQuery.sizeOf(context);
         final dpr = MediaQuery.devicePixelRatioOf(context);
-        return Image.asset(
-          assetPath,
+        return Image.file(
+          file,
           fit: BoxFit.cover,
           cacheWidth: (size.width * dpr).round(),
         );
@@ -1354,14 +1416,40 @@ const Map<String, SceneryConfig> _sceneryConfigs = {
   'Sunrise': SceneryConfig.gradient(
     colors: [Color(0xFFFF512F), Color(0xFFDD2476), Color(0xFFFFC371)],
   ),
-  'Forest Path': SceneryConfig.image(assetPath: 'assets/scenery/forest_1.jpg'),
-  'Evergreen': SceneryConfig.image(assetPath: 'assets/scenery/forest_2.jpg'),
-  'Quiet Library': SceneryConfig.image(
-    assetPath: 'assets/scenery/library_1.jpg',
+  'Forest Path': SceneryConfig.image(
+    asset: RemoteAsset.image(
+      path: 'scenery/forest_1.jpg',
+      label: 'Forest Path',
+      sizeBytes: 718920,
+    ),
   ),
-  'Blue Ridge': SceneryConfig.image(assetPath: 'assets/scenery/mountain_1.jpg'),
+  'Evergreen': SceneryConfig.image(
+    asset: RemoteAsset.image(
+      path: 'scenery/forest_2.jpg',
+      label: 'Evergreen',
+      sizeBytes: 884334,
+    ),
+  ),
+  'Quiet Library': SceneryConfig.image(
+    asset: RemoteAsset.image(
+      path: 'scenery/library_1.jpg',
+      label: 'Quiet Library',
+      sizeBytes: 596575,
+    ),
+  ),
+  'Blue Ridge': SceneryConfig.image(
+    asset: RemoteAsset.image(
+      path: 'scenery/mountain_1.jpg',
+      label: 'Blue Ridge',
+      sizeBytes: 627414,
+    ),
+  ),
   'Alpine Glow': SceneryConfig.image(
-    assetPath: 'assets/scenery/mountain_2.jpg',
+    asset: RemoteAsset.image(
+      path: 'scenery/mountain_2.jpg',
+      label: 'Alpine Glow',
+      sizeBytes: 534010,
+    ),
   ),
 };
 
