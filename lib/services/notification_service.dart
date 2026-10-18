@@ -49,7 +49,7 @@ class NotificationService {
     }
 
     const androidSettings =
-        fln.AndroidInitializationSettings('@mipmap/ic_launcher');
+        fln.AndroidInitializationSettings('ic_stat_bloop');
     const iosSettings = fln.DarwinInitializationSettings();
     const initSettings = fln.InitializationSettings(
       android: androidSettings,
