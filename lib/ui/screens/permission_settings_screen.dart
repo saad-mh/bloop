@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../providers/permission_status_provider.dart';
 import '../theme/tokens.dart';
@@ -91,7 +92,7 @@ class _PermissionSettingsScreenState
                         onPressed: () async {
                           await controller.openNotificationSettings();
                         },
-                        icon: const Icon(Icons.settings),
+                        icon: const Icon(LucideIcons.settings),
                         label: const Text('Open settings'),
                       ),
                     ),
@@ -111,7 +112,7 @@ class _PermissionSettingsScreenState
                         onPressed: () async {
                           await controller.requestExactAlarmPermission();
                         },
-                        icon: const Icon(Icons.settings),
+                        icon: const Icon(LucideIcons.settings),
                         label: const Text('Open settings'),
                       ),
                     ),

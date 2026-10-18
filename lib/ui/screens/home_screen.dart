@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../models/task.dart';
 import '../../providers/collapsed_sections_provider.dart';
@@ -87,7 +88,7 @@ class HomeScreen extends ConsumerWidget {
                   constraints.maxWidth - _headerButtonsWidth,
                 ),
                 leading: BloopIconButton(
-                  icon: Icons.settings_outlined,
+                  icon: LucideIcons.settings,
                   tooltip: 'Settings',
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SettingsScreen()),
