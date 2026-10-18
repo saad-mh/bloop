@@ -262,12 +262,36 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     return stored;
   }
 
+  /// Keys this notifier owns. The box also holds the saved focus session and
+  /// the onboarding flag, which a settings reset must leave alone.
+  static const _settingKeys = [
+    'defaultReminderMinutes',
+    'defaultTaskTimeOffsetMinutes',
+    'defaultPriority',
+    'notificationsEnabled',
+    'focusSessionNotificationsEnabled',
+    'focusFullScreenEnabled',
+    'focusAppPinningEnabled',
+    'focusAllowOverrides',
+    'themeMode',
+    'seedColor',
+    'userName',
+    'defaultFocusMinutes',
+  ];
+
   void resetDefaults() {
-    state = const SettingsState();
+    final lastTab = state.lastTabIndex;
+    state = const SettingsState().copyWith(lastTabIndex: lastTab);
     try {
       final box = Hive.box(StorageService.settingsBoxName);
-      box.clear();
+      box.deleteAll(_settingKeys);
     } catch (_) {}
+    SharedPreferences.getInstance().then((prefs) {
+      prefs.setBool(
+        FocusSessionPrefs.focusNotificationsEnabledKey,
+        state.focusSessionNotificationsEnabled,
+      );
+    });
   }
 }
 

@@ -38,19 +38,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _editName(String current) async {
+    final controller = ref.read(settingsScreenControllerProvider);
     final name = await showDialog<String>(
       context: context,
       builder: (_) => _PromptDialog(
         title: 'What would you like to be called?',
         label: 'Name',
-        helper: '',
+        helper: 'Leave empty to be greeted as "User".',
         initial: current,
         maxLength: 30,
         capitalization: TextCapitalization.words,
       ),
     );
     if (name == null) return;
-    ref.read(settingsScreenControllerProvider).setUserName(name);
+    controller.setUserName(name);
   }
 
   Future<void> _pickFocusLength(int choice, int current) async {
@@ -142,8 +143,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
     if (json == null || json.isEmpty) return;
-    await controller.importJson(json);
-    if (mounted) _snack('Import completed');
+    final imported = await controller.importJson(json);
+    if (!mounted) return;
+    _snack(imported ? 'Import completed' : 'Could not import that JSON');
   }
 
   @override

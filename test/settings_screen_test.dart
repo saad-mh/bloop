@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bloop/models/task.dart';
 import 'package:bloop/providers/settings_provider.dart';
+import 'package:bloop/providers/task_provider.dart';
 import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/permission_settings_screen.dart';
 import 'package:bloop/ui/screens/settings_screen.dart';
@@ -309,6 +310,20 @@ void main() {
 
     expect(storage.getAll().map((t) => t.title), ['imported task']);
     expect(find.text('Import completed'), findsOneWidget);
+  });
+
+  testWidgets('import says so when the JSON is not usable', (tester) async {
+    await storage.upsert(Task(title: 'existing'));
+    await open(tester, advanced: true);
+
+    await tapText(tester, 'Import data');
+    await tester.enterText(dialogField, 'not json');
+    await tapText(tester, 'Import');
+
+    expect(find.text('Could not import that JSON'), findsOneWidget);
+    expect(find.text('Import completed'), findsNothing);
+    expect(container.read(taskListProvider).hasError, isFalse);
+    expect(storage.getAll().map((t) => t.title), ['existing']);
   });
 
   testWidgets('clear all tasks asks first, then deletes', (tester) async {

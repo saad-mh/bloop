@@ -61,4 +61,20 @@ void main() {
     expect(settings.state.defaultFocusMinutes, 25);
     expect(box.get('defaultFocusMinutes'), isNull);
   });
+
+  test('reset leaves the saved focus session and the tab alone', () async {
+    await box.put('focusSessionIsActive', true);
+    final settings = SettingsNotifier()
+      ..setLastTabIndex(1)
+      ..setUserName('Saad');
+    await box.flush();
+
+    settings.resetDefaults();
+    await box.flush();
+
+    expect(settings.state.userName, '');
+    expect(settings.state.lastTabIndex, 1);
+    expect(box.get('userName'), isNull);
+    expect(box.get('focusSessionIsActive'), isTrue);
+  });
 }
