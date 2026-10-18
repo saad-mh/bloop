@@ -224,6 +224,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           onChanged: (v) => _pickFocusLength(v, focusMinutes),
                         ),
                       ),
+                      SwitchListTile(
+                        title: const Text('New Focus screen'),
+                        subtitle: const Text(
+                          'Pick a task, one timer and three controls. No '
+                          'breaks or session counts',
+                        ),
+                        value: settings.focusV2Enabled,
+                        onChanged: controller.setFocusV2Enabled,
+                      ),
                     ],
                   ),
                   const _GroupLabel('Tags'),

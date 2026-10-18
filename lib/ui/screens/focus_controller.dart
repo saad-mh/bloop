@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:just_audio/just_audio.dart';
 
 import '../../models/task.dart';
 import '../../providers/settings_provider.dart';
+import '../../providers/task_provider.dart';
 import '../../services/focus_foreground_task.dart';
 import '../../services/notif_service.dart';
 import '../../services/storage_service.dart';
@@ -35,6 +37,7 @@ class FocusController extends ChangeNotifier {
     _fullScreenEnabled = settings.focusFullScreenEnabled;
     _appPinningEnabled = settings.focusAppPinningEnabled;
     _allowOverrides = settings.focusAllowOverrides;
+    _focusV2Enabled = settings.focusV2Enabled;
     _focusDuration = Duration(minutes: settings.defaultFocusMinutes);
     _plannedDurationSeconds = _focusDuration.inSeconds;
     _remaining = _focusDuration;
@@ -70,6 +73,13 @@ class FocusController extends ChangeNotifier {
       _fullScreenEnabled = next.focusFullScreenEnabled;
       _appPinningEnabled = next.focusAppPinningEnabled;
       _allowOverrides = next.focusAllowOverrides;
+      if (previous?.focusV2Enabled != next.focusV2Enabled) {
+        _focusV2Enabled = next.focusV2Enabled;
+        // The new screen has no breaks, so leave one that was in progress.
+        if (_focusV2Enabled && _sessionType != _SessionType.focus) {
+          _resetSession(stopService: true);
+        }
+      }
       if (previous?.defaultFocusMinutes != next.defaultFocusMinutes) {
         _useDefaultFocusLength(next.defaultFocusMinutes);
       }
@@ -86,6 +96,12 @@ class FocusController extends ChangeNotifier {
   static const String _selectedSoundKey = 'focus.ui.selectedSound';
   static const String _selectedSceneryKey = 'focus.ui.selectedScenery';
   static const String _taskTitleKey = 'focus.session.taskTitle';
+  static const String _taskIdKey = 'focus.session.taskId';
+  static const String _finishedKey = 'focus.session.finished';
+  static const String _totalSecondsKey = 'focus.session.totalSeconds';
+
+  /// Time added by "Keep going" on the Time's up screen.
+  static const Duration keepGoingExtra = Duration(minutes: 5);
 
   final Ref _ref;
 
@@ -107,6 +123,19 @@ class FocusController extends ChangeNotifier {
 
   /// Title of the task the session was started from, if any.
   String? _taskTitle;
+
+  /// Id of that task, so the screen can find its tags and complete it.
+  String? _taskId;
+
+  /// Whether the redesigned Focus screen is on: one session, no breaks.
+  bool _focusV2Enabled = false;
+
+  /// The timer reached zero and the Time's up screen is waiting for an answer.
+  bool _finished = false;
+
+  /// Length the running session started with, for the ring. A paused session
+  /// restarts with only what was left, so the planned length can't be used.
+  int _totalSeconds = 0;
 
   Duration _remaining = const Duration(minutes: 25);
   bool _isRunning = false;
@@ -147,11 +176,23 @@ class FocusController extends ChangeNotifier {
   String get selectedScenery => _selectedScenery;
   bool get isFocusSession => _sessionType == _SessionType.focus;
   String? get taskTitle => _taskTitle;
+  String? get taskId => _taskId;
+  bool get focusV2Enabled => _focusV2Enabled;
+  bool get isFinished => _finished;
+
+  /// Length of the current session, as the ring measures it.
+  Duration get sessionLength => Duration(
+    seconds: _totalSeconds > 0
+        ? _totalSeconds
+        : _currentSessionDuration().inSeconds,
+  );
 
   bool get isFullScreenActive => _isSessionActive && _fullScreenEnabled;
 
   double get progress {
-    final maxSeconds = _currentSessionDuration().inSeconds;
+    final maxSeconds = _focusV2Enabled
+        ? sessionLength.inSeconds
+        : _currentSessionDuration().inSeconds;
     if (maxSeconds == 0) return 0.0;
     return 1 - (_remaining.inSeconds / maxSeconds);
   }
@@ -190,6 +231,8 @@ class FocusController extends ChangeNotifier {
   void start() {
     final nowUtc = DateTime.now().toUtc();
     _timer?.cancel();
+    if (!_isSessionActive) _totalSeconds = _plannedDurationSeconds;
+    _finished = false;
     _isRunning = true;
     _isSessionActive = true;
     _sessionStartUtc = nowUtc;
@@ -212,8 +255,41 @@ class FocusController extends ChangeNotifier {
     if (_isRunning) _accumulateFocusTime();
     _resetSession(stopService: false);
     _taskTitle = task.title;
+    _taskId = task.id;
     start();
   }
+
+  /// Starts a focus session that isn't tied to a task.
+  void startWithoutTask() {
+    _resetSession(stopService: false);
+    start();
+  }
+
+  /// Stops the session and keeps the task open. Time already focused counts.
+  void endSession() {
+    if (_isRunning) _accumulateFocusTime();
+    _resetSession(stopService: true);
+  }
+
+  /// Ends the session and marks its task done. Time already focused counts.
+  Future<void> completeTask() async {
+    final id = _taskId;
+    final tasks = _ref.read(taskListProvider).valueOrNull ?? const <Task>[];
+    final task = tasks.where((t) => t.id == id).firstOrNull;
+    endSession();
+    if (task == null) return;
+    await _ref.read(taskListProvider.notifier).toggleComplete(task, value: true);
+  }
+
+  /// Time's up: adds [keepGoingExtra] and runs on.
+  void keepGoing() {
+    _isSessionActive = false;
+    _plannedDurationSeconds = keepGoingExtra.inSeconds;
+    start();
+  }
+
+  /// Time's up: leaves the task open and goes back to ready.
+  void dismissFinished() => _resetSession(stopService: true);
 
   void pause() {
     if (!_isRunning) return;
@@ -245,6 +321,8 @@ class FocusController extends ChangeNotifier {
     }
     _cancelNotification();
     _taskTitle = null;
+    _taskId = null;
+    _finished = false;
     _sessionType = _SessionType.focus;
     _sessionIndex = 1;
     _isRunning = false;
@@ -290,6 +368,8 @@ class FocusController extends ChangeNotifier {
     _totalSessions = totalSessions.clamp(1, 12);
     _autoStartNext = autoStartNext;
     _taskTitle = null;
+    _taskId = null;
+    _finished = false;
     _sessionType = _SessionType.focus;
     _sessionIndex = 1;
     _isRunning = false;
@@ -361,6 +441,19 @@ class FocusController extends ChangeNotifier {
     _cancelNotification();
     _cancelFocusSessionNotification();
     _finalizeFocusTime(nowUtc: nowUtc);
+    if (_focusV2Enabled) {
+      // One session, then ask whether the task is done.
+      _isRunning = false;
+      _isSessionActive = false;
+      _finished = true;
+      _remaining = Duration.zero;
+      _sessionStartUtc = nowUtc;
+      _safeNotify();
+      _persistState();
+      _syncAudioForState();
+      HapticFeedback.vibrate();
+      return;
+    }
     _isRunning = false;
     _advanceSession();
     _sessionStartUtc = nowUtc;
@@ -545,6 +638,9 @@ class FocusController extends ChangeNotifier {
       await box.put(FocusSessionPrefs.isRunningKey, _isRunning);
       await box.put(FocusSessionPrefs.isActiveKey, _isSessionActive);
       await box.put(_taskTitleKey, _taskTitle);
+      await box.put(_taskIdKey, _taskId);
+      await box.put(_finishedKey, _finished);
+      await box.put(_totalSecondsKey, _totalSeconds);
       await FocusSessionPrefs.writeSession(
         sessionType: _sessionType.name,
         sessionStartUtc: _sessionStartUtc ?? DateTime.now().toUtc(),
@@ -583,6 +679,9 @@ class FocusController extends ChangeNotifier {
       final storedRunning = box.get(FocusSessionPrefs.isRunningKey) as bool?;
       final storedActive = box.get(FocusSessionPrefs.isActiveKey) as bool?;
       final storedTaskTitle = box.get(_taskTitleKey) as String?;
+      final storedTaskId = box.get(_taskIdKey) as String?;
+      final storedFinished = box.get(_finishedKey) as bool?;
+      final storedTotalSeconds = box.get(_totalSecondsKey) as int?;
       final storedDim = box.get(_dimScreenEnabledKey) as bool?;
       final storedSounds = box.get(_soundsEnabledKey) as bool?;
       final storedScenery = box.get(_sceneryEnabledKey) as bool?;
@@ -611,6 +710,9 @@ class FocusController extends ChangeNotifier {
           ? storedPlanned ?? _currentSessionDuration().inSeconds
           : _currentSessionDuration().inSeconds;
       _taskTitle = storedTaskTitle;
+      _taskId = storedTaskId;
+      _finished = storedFinished ?? false;
+      _totalSeconds = storedTotalSeconds ?? 0;
       _dimScreenEnabled = storedDim ?? _dimScreenEnabled;
       _soundsEnabled = storedSounds ?? _soundsEnabled;
       _sceneryEnabled = storedScenery ?? _sceneryEnabled;
@@ -620,7 +722,9 @@ class FocusController extends ChangeNotifier {
       // ignore load failures
     }
     if (_disposed) return;
-    _remaining = _computeRemaining(nowUtc: DateTime.now().toUtc());
+    _remaining = _finished
+        ? Duration.zero
+        : _computeRemaining(nowUtc: DateTime.now().toUtc());
     _isInitializing = false;
     _safeNotify();
     _syncAudioForState();
