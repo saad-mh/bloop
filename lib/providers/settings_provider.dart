@@ -22,7 +22,7 @@ class SettingsState {
     this.lastTabIndex = 0,
     this.userName = '',
     this.defaultFocusMinutes = defaultFocusMinutesFallback,
-    this.focusV2Enabled = false,
+    this.focusV2Enabled = true,
   });
 
   /// Focus length until the user picks one.
@@ -50,6 +50,7 @@ class SettingsState {
   final int defaultFocusMinutes;
 
   /// Shows the redesigned Focus tab: pick a task, one timer, three controls.
+  /// On unless the user switches it off in Settings.
   final bool focusV2Enabled;
 
   SettingsState copyWith({
@@ -139,7 +140,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
         defaultFocusMinutes: _validFocusMinutes(
           box.get('defaultFocusMinutes') as int?,
         ),
-        focusV2Enabled: box.get('focusV2Enabled') as bool? ?? false,
+        focusV2Enabled:
+            box.get('focusV2Enabled') as bool? ?? state.focusV2Enabled,
       );
       SharedPreferences.getInstance().then((prefs) {
         prefs.setBool(
