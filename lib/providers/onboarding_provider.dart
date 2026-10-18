@@ -72,8 +72,12 @@ class OnboardingNotifier extends StateNotifier<bool> {
         DateTime.now(),
         tag: created.isEmpty ? null : created.first,
       );
-      await _ref.read(taskListProvider.notifier).addOrUpdate(example);
-      if (_ref.read(taskListProvider).hasError) return false;
+      // Saved directly rather than through the task list's addOrUpdate: that
+      // schedules reminders, which asks Android for notification permission,
+      // and the example has none. The permission prompt is not part of
+      // onboarding.
+      await _storage.upsert(example);
+      await _ref.read(taskListProvider.notifier).load();
       await _storage.setOnboardingExampleTaskId(example.id);
       _ref.read(exampleTaskIdProvider.notifier).state = example.id;
 
