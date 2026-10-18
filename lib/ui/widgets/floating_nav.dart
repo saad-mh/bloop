@@ -25,10 +25,18 @@ double floatingNavClearance(BuildContext context) =>
 
 /// A destination in the pill.
 class FloatingNavDestination {
-  const FloatingNavDestination({required this.icon, required this.label});
+  const FloatingNavDestination({
+    required this.icon,
+    required this.label,
+    this.iconText,
+  });
 
   final IconData icon;
   final String label;
+
+  /// Text shown in place of both [icon] and the visible label, e.g. the time
+  /// left on a running timer. [label] is still what screen readers announce.
+  final String? iconText;
 }
 
 /// Floating bottom navigation: a pill holding the destinations, with a round
@@ -133,7 +141,9 @@ class _Segment extends StatelessWidget {
       button: true,
       selected: selected,
       excludeSemantics: true,
-      label: destination.label,
+      label: destination.iconText == null
+          ? destination.label
+          : '${destination.label}, ${destination.iconText} left',
       onTap: onTap,
       child: Material(
         color: Colors.transparent,
@@ -158,15 +168,29 @@ class _Segment extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(destination.icon, size: 20, color: foreground),
-                const SizedBox(width: BloopSpace.x1 + 2),
-                Text(
-                  destination.label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: foreground,
-                    fontWeight: FontWeight.w600,
+                if (destination.iconText case final text?)
+                  Text(
+                    text,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w700,
+                      // Fixed-width digits so the pill doesn't jitter each tick.
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  )
+                else
+                  Icon(destination.icon, size: 20, color: foreground),
+                // The time stands alone; the label is still in the semantics.
+                if (destination.iconText == null) ...[
+                  const SizedBox(width: BloopSpace.x1 + 2),
+                  Text(
+                    destination.label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

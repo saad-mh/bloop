@@ -159,6 +159,13 @@ class _AppShellState extends ConsumerState<AppShell>
     _permissionFlowStarted = false;
   }
 
+  /// Minutes are not wrapped at 60, matching the Focus dial.
+  static String _formatTimeLeft(Duration remaining) {
+    final minutes = remaining.inMinutes.toString().padLeft(2, '0');
+    final seconds = remaining.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$minutes:$seconds';
+  }
+
   void _selectTab(int i) {
     if (i == ref.read(selectedTabProvider)) return;
     HapticFeedback.selectionClick();
@@ -185,6 +192,14 @@ class _AppShellState extends ConsumerState<AppShell>
         onFocusTab &&
         (focusController.isSessionActive || focusController.isFinished);
     final isFullScreen = !v2 && focusController.isFullScreenActive;
+    // A session that is running or paused shows its time left on the Focus
+    // tab while another tab is open.
+    final timeLeft =
+        !onFocusTab &&
+            focusController.isSessionActive &&
+            !focusController.isFinished
+        ? _formatTimeLeft(focusController.remaining)
+        : null;
     final pages = IndexedStack(
       index: index,
       children: [for (final tab in _tabs) tab.page],
@@ -200,7 +215,17 @@ class _AppShellState extends ConsumerState<AppShell>
             : FloatingNavLayer(
                 showNav: !v2Takeover,
                 nav: FloatingNav(
-                  destinations: [for (final tab in _tabs) tab.destination],
+                  destinations: [
+                    for (var i = 0; i < _tabs.length; i++)
+                      if (i == focusTabIndex && timeLeft != null)
+                        FloatingNavDestination(
+                          icon: _tabs[i].destination.icon,
+                          label: _tabs[i].destination.label,
+                          iconText: timeLeft,
+                        )
+                      else
+                        _tabs[i].destination,
+                  ],
                   selectedIndex: index,
                   onSelected: _selectTab,
                   onNewTask: _openNewTask,

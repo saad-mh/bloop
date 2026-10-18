@@ -50,6 +50,31 @@ void main() {
       expect(find.byTooltip('New task'), findsOneWidget);
     });
 
+    testWidgets('shows iconText alone, without the icon or label', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: FloatingNav(
+              destinations: const [
+                FloatingNavDestination(
+                  icon: Icons.adjust,
+                  label: 'Focus',
+                  iconText: '12:34',
+                ),
+              ],
+              selectedIndex: 0,
+              onSelected: (_) {},
+              onNewTask: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('12:34'), findsOneWidget);
+      expect(find.byIcon(Icons.adjust), findsNothing);
+      expect(find.text('Focus'), findsNothing);
+    });
+
     testWidgets('reports the tapped destination', (tester) async {
       final taps = <int>[];
       await tester.pumpWidget(_app(onSelected: taps.add));
