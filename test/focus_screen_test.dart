@@ -184,6 +184,36 @@ void main() {
 
       expect(find.text('FOCUSING ON'), findsOneWidget);
       expect(find.text('Robotics Club budget sheet'), findsOneWidget);
+      // The hint would repeat the title.
+      expect(find.textContaining('Focus on'), findsNothing);
+    });
+
+    testWidgets('a 60 minute session reads 60:00, not 00:00', (tester) async {
+      await pumpCard(tester, _FakeFocus()..left = const Duration(minutes: 60));
+
+      expect(find.text('60:00'), findsOneWidget);
+    });
+
+    testWidgets('does not assert when the area is shorter than the nav', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1280, 500);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            focusControllerProvider.overrideWith((ref) => _FakeFocus()),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const Scaffold(body: PomodoroCard()),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('fits a small phone in both themes without overflow', (
@@ -268,6 +298,53 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(focus.pickedScenery, ['Moonlight']);
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a short landscape screen scales down without overflow', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1280, 600);
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            focusControllerProvider.overrideWith(
+              (ref) => session()..task = 'A long task title that wraps',
+            ),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.light,
+            home: const Scaffold(body: PomodoroCard()),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+
+      expect(find.text('18:42'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('controls hide again when a new session starts', (
+      tester,
+    ) async {
+      final focus = session();
+      await pumpCard(tester, focus);
+      await tester.tapAt(const Offset(200, 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Pause').hitTestable(), findsOneWidget);
+
+      focus
+        ..active = false
+        ..notifyListeners();
+      await tester.pump();
+      focus
+        ..active = true
+        ..notifyListeners();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Pause').hitTestable(), findsNothing);
       await tester.pump(const Duration(seconds: 5));
     });
 

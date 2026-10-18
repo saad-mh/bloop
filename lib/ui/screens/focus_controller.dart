@@ -378,9 +378,7 @@ class FocusController extends ChangeNotifier {
   void _advanceSession() {
     if (_sessionType == _SessionType.focus) {
       final isLastFocus = _sessionIndex >= _totalSessions;
-      _sessionType = isLastFocus
-          ? _SessionType.longBreak
-          : _SessionType.shortBreak;
+      _sessionType = isLastFocus ? _SessionType.longBreak : _SessionType.shortBreak;
       return;
     }
     if (_sessionType == _SessionType.shortBreak) {
@@ -530,9 +528,7 @@ class FocusController extends ChangeNotifier {
   }
 
   Future<void> _cancelFocusSessionNotification() async {
-    await _notifService.cancelNotification(
-      FocusSessionPrefs.focusNotificationId,
-    );
+    await _notifService.cancelNotification(FocusSessionPrefs.focusNotificationId);
   }
 
   Future<void> _persistState() async {
@@ -543,10 +539,7 @@ class FocusController extends ChangeNotifier {
         FocusSessionPrefs.sessionStartKey,
         (_sessionStartUtc ?? DateTime.now().toUtc()).millisecondsSinceEpoch,
       );
-      await box.put(
-        FocusSessionPrefs.plannedDurationKey,
-        _plannedDurationSeconds,
-      );
+      await box.put(FocusSessionPrefs.plannedDurationKey, _plannedDurationSeconds);
       await box.put(FocusSessionPrefs.sessionIndexKey, _sessionIndex);
       await box.put(_totalSessionsKey, _totalSessions);
       await box.put(FocusSessionPrefs.isRunningKey, _isRunning);
@@ -584,8 +577,7 @@ class FocusController extends ChangeNotifier {
       final box = Hive.box(StorageService.settingsBoxName);
       final storedType = box.get(FocusSessionPrefs.sessionTypeKey) as String?;
       final storedStart = box.get(FocusSessionPrefs.sessionStartKey) as int?;
-      final storedPlanned =
-          box.get(FocusSessionPrefs.plannedDurationKey) as int?;
+      final storedPlanned = box.get(FocusSessionPrefs.plannedDurationKey) as int?;
       final storedIndex = box.get(FocusSessionPrefs.sessionIndexKey) as int?;
       final storedTotal = box.get(_totalSessionsKey) as int?;
       final storedRunning = box.get(FocusSessionPrefs.isRunningKey) as bool?;
@@ -657,15 +649,12 @@ class FocusController extends ChangeNotifier {
   }
 
   void _syncAudioForState({bool restart = false}) {
-    if (!_soundsEnabled ||
-        !_isSessionActive ||
-        _sessionType != _SessionType.focus) {
+    if (!_soundsEnabled || !_isSessionActive || _sessionType != _SessionType.focus) {
       unawaited(_audioEngine.stop());
       return;
     }
     if (_isRunning) {
-      final asset =
-          focusSoundAssets[_selectedSound] ??
+      final asset = focusSoundAssets[_selectedSound] ??
           (focusSoundAssets.isNotEmpty ? focusSoundAssets.values.first : '');
       if (asset.isEmpty) {
         unawaited(_audioEngine.stop());
@@ -785,4 +774,8 @@ class _FocusAudioEngine {
   }
 }
 
-enum _SessionType { focus, shortBreak, longBreak }
+enum _SessionType {
+  focus,
+  shortBreak,
+  longBreak,
+}

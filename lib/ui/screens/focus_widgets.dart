@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -49,6 +50,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
   Timer? _controlsTimer;
   bool _controlsVisible = false;
   bool _isInteracting = false;
+  bool _sessionWasActive = false;
   ProviderSubscription<FocusController>? _focusSub;
 
   static const Duration _autoHideDuration = Duration(seconds: 4);
@@ -56,15 +58,14 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
   @override
   void initState() {
     super.initState();
-    _focusSub = ref.listenManual(focusControllerProvider, (previous, next) {
-      final wasActive = previous?.isSessionActive ?? false;
-      if (!wasActive && next.isSessionActive) {
-        if (mounted) {
-          setState(() {
-            _controlsVisible = false;
-          });
-        }
+    _sessionWasActive = ref.read(focusControllerProvider).isSessionActive;
+    // `previous` and `next` are the same notifier, so remember the last value.
+    _focusSub = ref.listenManual(focusControllerProvider, (_, next) {
+      final active = next.isSessionActive;
+      if (!_sessionWasActive && active && mounted) {
+        setState(() => _controlsVisible = false);
       }
+      _sessionWasActive = active;
     });
   }
 
@@ -127,6 +128,9 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
         : _buildIdle(context, controller);
   }
 
+  /// Whether the heading already names the task, making the hint redundant.
+  bool _namesTask(FocusController c) => c.isFocusSession && c.taskTitle != null;
+
   /// The tab as seen between sessions: header, ring, start button and the
   /// total for today.
   Widget _buildIdle(BuildContext context, FocusController controller) {
@@ -158,10 +162,12 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight:
-                        constraints.maxHeight -
-                        floatingNavClearance(context) -
-                        BloopSpace.x4,
+                    minHeight: math.max(
+                      0,
+                      constraints.maxHeight -
+                          floatingNavClearance(context) -
+                          BloopSpace.x4,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -180,14 +186,16 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                         ink: ink,
                       ),
                       const SizedBox(height: BloopSpace.x6),
-                      Text(
-                        controller.focusHintText,
-                        textAlign: TextAlign.center,
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: tokens.muted,
+                      if (!_namesTask(controller)) ...[
+                        Text(
+                          controller.focusHintText,
+                          textAlign: TextAlign.center,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: tokens.muted,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: BloopSpace.x6),
+                        const SizedBox(height: BloopSpace.x6),
+                      ],
                       FilledButton.icon(
                         onPressed: () {
                           canStart ? controller.start() : controller.pause();
@@ -240,7 +248,7 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
     final scrim = controller.dimScreenEnabled
         ? 0.6
         : (controller.sceneryEnabled ? 0.45 : 0.0);
-    final hideHint = controller.isFocusSession && controller.taskTitle != null;
+    final hideHint = _namesTask(controller);
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -272,28 +280,45 @@ class _PomodoroCardState extends ConsumerState<PomodoroCard> {
                 ink: ink,
                 showTitleWithoutTask: true,
               ),
-              const Spacer(),
-              _TimerDial(
-                remaining: controller.remaining,
-                progress: controller.progress,
-                paused: !controller.isRunning,
-                ink: ink,
-              ),
-              if (!hideHint)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    BloopSpace.x8,
-                    BloopSpace.x6,
-                    BloopSpace.x8,
-                    0,
-                  ),
-                  child: Text(
-                    controller.focusHintText,
-                    textAlign: TextAlign.center,
-                    style: textTheme.bodyLarge?.copyWith(color: ink.muted),
+              Expanded(
+                child: Center(
+                  // Shrinks the ring on short screens (landscape, split
+                  // screen, large text) rather than overflowing.
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _TimerDial(
+                          remaining: controller.remaining,
+                          progress: controller.progress,
+                          paused: !controller.isRunning,
+                          ink: ink,
+                        ),
+                        if (!hideHint)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                              BloopSpace.x8,
+                              BloopSpace.x6,
+                              BloopSpace.x8,
+                              0,
+                            ),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 320),
+                              child: Text(
+                                controller.focusHintText,
+                                textAlign: TextAlign.center,
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: ink.muted,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
-              const Spacer(),
+              ),
               Padding(
                 padding: EdgeInsets.only(bottom: insets.bottom + BloopSpace.x8),
                 child: AnimatedOpacity(
@@ -876,7 +901,7 @@ class _SessionHeading extends StatelessWidget {
             Text(
               title,
               textAlign: TextAlign.center,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: textTheme.headlineMedium?.copyWith(
                 color: ink.ink,
@@ -908,10 +933,8 @@ class _TimerDial extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final minutes = remaining.inMinutes
-        .remainder(60)
-        .toString()
-        .padLeft(2, '0');
+    // Minutes are not wrapped at 60: a 60 minute session reads 60:00.
+    final minutes = remaining.inMinutes.toString().padLeft(2, '0');
     final seconds = remaining.inSeconds
         .remainder(60)
         .toString()
@@ -930,7 +953,7 @@ class _TimerDial extends StatelessWidget {
             SizedBox.expand(
               child: TweenAnimationBuilder<double>(
                 duration: const Duration(milliseconds: 500),
-                tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+                tween: Tween<double>(end: progress.clamp(0.0, 1.0)),
                 builder: (context, value, _) => CircularProgressIndicator(
                   value: value,
                   strokeWidth: 6,
@@ -1033,7 +1056,6 @@ class _FocusControlsPanel extends StatelessWidget {
               label: 'Long swipe to skip session',
               onArmed: onSkipRequested,
               onInteract: onInteract,
-              mutedStyle: true,
             ),
             const SizedBox(height: BloopSpace.x3),
             Wrap(
@@ -1090,14 +1112,12 @@ class SlideToEndControl extends StatelessWidget {
     required this.label,
     required this.onCompleted,
     required this.onInteract,
-    this.destructive = false,
     super.key,
   });
 
   final String label;
   final VoidCallback onCompleted;
   final VoidCallback onInteract;
-  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
@@ -1117,14 +1137,12 @@ class LongSwipeSkipControl extends StatelessWidget {
     required this.label,
     required this.onArmed,
     required this.onInteract,
-    this.mutedStyle = false,
     super.key,
   });
 
   final String label;
   final VoidCallback onArmed;
   final VoidCallback onInteract;
-  final bool mutedStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -1297,7 +1315,13 @@ class _FocusSceneryBackground extends StatelessWidget {
     if (enabled && config.type == SceneryType.image) {
       final assetPath = config.assetPath;
       if (assetPath != null && assetPath.isNotEmpty) {
-        return Image.asset(assetPath, fit: BoxFit.cover);
+        final size = MediaQuery.sizeOf(context);
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        return Image.asset(
+          assetPath,
+          fit: BoxFit.cover,
+          cacheWidth: (size.width * dpr).round(),
+        );
       }
     }
     return DecoratedBox(
