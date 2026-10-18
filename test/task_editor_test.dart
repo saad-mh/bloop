@@ -9,7 +9,6 @@ import 'package:bloop/services/storage_service.dart';
 import 'package:bloop/ui/screens/task_editor_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
 import 'package:bloop/ui/widgets/choice_chip.dart';
-import 'package:bloop/utils/tag_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -49,15 +48,6 @@ class _FakeTags extends TagsNotifier {
   _FakeTags(List<String> names) : super(StorageService.instance) {
     state = AsyncData(names);
   }
-
-  final added = <String>[];
-
-  @override
-  Future<TagNameError?> addTag(String tag) async {
-    added.add(tag);
-    state = AsyncData([...state.value!, tag]);
-    return null;
-  }
 }
 
 void main() {
@@ -81,16 +71,19 @@ void main() {
   });
 
   late _FakeTasks tasks;
-  late _FakeTags tags;
 
   /// Opens the editor over a home page, so closing it is observable.
-  Future<void> openEditor(WidgetTester tester, {Task? task}) async {
+  Future<void> openEditor(
+    WidgetTester tester, {
+    Task? task,
+    List<String> tagNames = const ['college', 'robotics'],
+  }) async {
     tester.view.physicalSize = const Size(1200, 2600);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
     tasks = _FakeTasks();
-    tags = _FakeTags(['college', 'robotics']);
+    final tags = _FakeTags(tagNames);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -284,54 +277,19 @@ void main() {
       expect(tasks.saved.single.tags, ['college', 'robotics']);
     });
 
-    testWidgets('a new tag is selected now and stored when saved', (
-      tester,
-    ) async {
+    testWidgets('tags can only be picked, not created, here', (tester) async {
       await openEditor(tester);
-      await typeTitle(tester, 'Lab report');
 
-      await tap(tester, find.text('New tag'));
-      await tester.enterText(find.byType(TextField).last, 'errands');
-      await tap(tester, find.text('Add'));
-
-      expect(chip(tester, 'errands').selected, isTrue);
-      expect(tags.added, isEmpty);
-
-      await tap(tester, find.text('Add task'));
-      expect(tags.added, ['errands']);
-      expect(tasks.saved.single.tags, ['errands']);
+      expect(find.text('New tag'), findsNothing);
     });
 
-    testWidgets('a new tag named like an existing one picks that one', (
-      tester,
-    ) async {
-      await openEditor(tester);
-      await typeTitle(tester, 'Lab report');
+    testWidgets('with no tags it points to Settings', (tester) async {
+      await openEditor(tester, tagNames: const []);
 
-      await tap(tester, find.text('New tag'));
-      await tester.enterText(find.byType(TextField).last, 'COLLEGE');
-      await tap(tester, find.text('Add'));
-
-      expect(chip(tester, 'college').selected, isTrue);
-      expect(find.widgetWithText(BloopChoiceChip, 'COLLEGE'), findsNothing);
-
-      await tap(tester, find.text('Add task'));
-      expect(tags.added, isEmpty);
-      expect(tasks.saved.single.tags, ['college']);
-    });
-
-    testWidgets('a new tag is not stored when the page is discarded', (
-      tester,
-    ) async {
-      await openEditor(tester);
-
-      await tap(tester, find.text('New tag'));
-      await tester.enterText(find.byType(TextField).last, 'errands');
-      await tap(tester, find.text('Add'));
-      await tap(tester, find.byTooltip('Close'));
-      await tap(tester, find.text('Discard'));
-
-      expect(tags.added, isEmpty);
+      expect(
+        find.text('No tags yet. Create them in Settings.'),
+        findsOneWidget,
+      );
     });
   });
 

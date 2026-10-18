@@ -4,14 +4,14 @@ import 'package:bloop/models/task.dart';
 import 'package:bloop/providers/tags_provider.dart';
 import 'package:bloop/providers/task_provider.dart';
 import 'package:bloop/services/storage_service.dart';
-import 'package:bloop/ui/screens/tags_screen.dart';
 import 'package:bloop/ui/theme/app_theme.dart';
+import 'package:bloop/ui/widgets/tag_manager.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
-/// Runs the screen against real storage, so rename and delete are checked
+/// Runs the widget against real storage, so rename and delete are checked
 /// through to the tasks. The boxes live in memory: file I/O never completes
 /// under the fake clock widget tests run on.
 void main() {
@@ -21,14 +21,8 @@ void main() {
     Hive.registerAdapter(TaskAdapter());
     Hive.registerAdapter(PriorityAdapter());
     Hive.registerAdapter(RecurrenceAdapter());
-    await Hive.openBox<Task>(
-      StorageService.tasksBoxName,
-      bytes: Uint8List(0),
-    );
-    await Hive.openBox<String>(
-      StorageService.tagsBoxName,
-      bytes: Uint8List(0),
-    );
+    await Hive.openBox<Task>(StorageService.tasksBoxName, bytes: Uint8List(0));
+    await Hive.openBox<String>(StorageService.tagsBoxName, bytes: Uint8List(0));
   });
 
   tearDownAll(() async {
@@ -52,7 +46,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(theme: AppTheme.light, home: const TagsScreen()),
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const Scaffold(
+            body: SingleChildScrollView(child: TagManager()),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -147,8 +146,10 @@ void main() {
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('removed from 2 tasks (1 open, 1 completed)'),
-        findsOneWidget);
+    expect(
+      find.textContaining('removed from 2 tasks (1 open, 1 completed)'),
+      findsOneWidget,
+    );
     // Nothing is deleted until confirmed.
     expect(storage.getTags(), contains('college'));
 

@@ -35,6 +35,9 @@ class FocusController extends ChangeNotifier {
     _fullScreenEnabled = settings.focusFullScreenEnabled;
     _appPinningEnabled = settings.focusAppPinningEnabled;
     _allowOverrides = settings.focusAllowOverrides;
+    _focusDuration = Duration(minutes: settings.defaultFocusMinutes);
+    _plannedDurationSeconds = _focusDuration.inSeconds;
+    _remaining = _focusDuration;
     _notifService.initNotification();
     _focusActionSub = _notifService.focusSessionActions.listen((action) {
       switch (action) {
@@ -67,6 +70,9 @@ class FocusController extends ChangeNotifier {
       _fullScreenEnabled = next.focusFullScreenEnabled;
       _appPinningEnabled = next.focusAppPinningEnabled;
       _allowOverrides = next.focusAllowOverrides;
+      if (previous?.defaultFocusMinutes != next.defaultFocusMinutes) {
+        _useDefaultFocusLength(next.defaultFocusMinutes);
+      }
       _safeNotify();
     });
     _loadPersistedState();
@@ -172,6 +178,15 @@ class FocusController extends ChangeNotifier {
     }
   }
 
+  /// Applies a new default length to the next session. A session already
+  /// started keeps the length it began with.
+  void _useDefaultFocusLength(int minutes) {
+    _focusDuration = Duration(minutes: minutes);
+    if (_isSessionActive || _sessionType != _SessionType.focus) return;
+    _plannedDurationSeconds = _focusDuration.inSeconds;
+    _remaining = _focusDuration;
+  }
+
   void start() {
     final nowUtc = DateTime.now().toUtc();
     _timer?.cancel();
@@ -267,7 +282,9 @@ class FocusController extends ChangeNotifier {
     required int totalSessions,
     required bool autoStartNext,
   }) {
-    _focusDuration = Duration(minutes: focusMinutes.clamp(1, 180));
+    _focusDuration = Duration(
+      minutes: focusMinutes.clamp(1, SettingsState.maxFocusMinutes),
+    );
     _shortBreakDuration = Duration(minutes: shortMinutes.clamp(1, 60));
     _longBreakDuration = Duration(minutes: longMinutes.clamp(1, 120));
     _totalSessions = totalSessions.clamp(1, 12);
@@ -584,11 +601,15 @@ class FocusController extends ChangeNotifier {
           isUtc: true,
         );
       }
-      _plannedDurationSeconds = storedPlanned ?? _currentSessionDuration().inSeconds;
       _sessionIndex = storedIndex ?? _sessionIndex;
       _totalSessions = storedTotal ?? _totalSessions;
       _isRunning = storedRunning ?? false;
       _isSessionActive = storedActive ?? _isRunning;
+      // An idle timer follows the current default length. The stored value
+      // is only the length of a session already started or paused.
+      _plannedDurationSeconds = _isSessionActive
+          ? storedPlanned ?? _currentSessionDuration().inSeconds
+          : _currentSessionDuration().inSeconds;
       _taskTitle = storedTaskTitle;
       _dimScreenEnabled = storedDim ?? _dimScreenEnabled;
       _soundsEnabled = storedSounds ?? _soundsEnabled;

@@ -48,6 +48,14 @@ class SettingsScreenController {
     _ref.read(settingsProvider.notifier).setFocusAllowOverrides(value);
   }
 
+  void setUserName(String name) {
+    _ref.read(settingsProvider.notifier).setUserName(name);
+  }
+
+  void setDefaultFocusMinutes(int minutes) {
+    _ref.read(settingsProvider.notifier).setDefaultFocusMinutes(minutes);
+  }
+
   void resetDefaults() {
     _ref.read(settingsProvider.notifier).resetDefaults();
   }
@@ -79,8 +87,14 @@ class SettingsScreenController {
     return _ref.read(taskListProvider.notifier).exportJson();
   }
 
-  Future<void> importJson(String json) {
-    return _ref.read(taskListProvider.notifier).importJson(json);
+  /// Returns whether [json] was imported. A failed import leaves the task
+  /// list in an error state, so it is reloaded from storage.
+  Future<bool> importJson(String json) async {
+    final tasks = _ref.read(taskListProvider.notifier);
+    await tasks.importJson(json);
+    if (!_ref.read(taskListProvider).hasError) return true;
+    await tasks.load();
+    return false;
   }
 }
 

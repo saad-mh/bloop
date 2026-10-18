@@ -49,10 +49,6 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
   final List<Duration> _reminders = [];
   final List<String> _tags = [];
 
-  /// Tags made on this page. They are stored when the task is saved, so
-  /// discarding the page leaves no tag behind.
-  final List<String> _pendingTags = [];
-
   bool _titleMissing = false;
   bool _moreOpen = false;
   bool _saving = false;
@@ -294,24 +290,6 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     });
   }
 
-  Future<void> _newTag() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => const _NewTagDialog(),
-    );
-    if (result == null || result.isEmpty || !mounted) return;
-    final known = ref.read(tagsProvider).valueOrNull ?? const <String>[];
-    // Tag names are unique ignoring case, so "work" selects an existing
-    // "Work" instead of adding a second tag storage would refuse.
-    final match = [...known, ..._pendingTags].where(
-      (t) => t.toLowerCase() == result.toLowerCase(),
-    );
-    if (match.isEmpty) {
-      setState(() => _pendingTags.add(result));
-    }
-    _toggleTag(match.isEmpty ? result : match.first, true);
-  }
-
   // ---- Closing, saving, deleting ------------------------------------------
 
   Future<bool> _confirmDiscard() async {
@@ -443,10 +421,6 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     );
 
     setState(() => _saving = true);
-    // Store the tags made here only now that the task is going in.
-    for (final tag in _pendingTags.where(_tags.contains)) {
-      await ref.read(tagsProvider.notifier).addTag(tag);
-    }
     final newIds = await ref.read(taskListProvider.notifier).addOrUpdate(task);
     if (!mounted) return;
     // addOrUpdate reports every failure as null, so tell a storage error from
@@ -659,7 +633,7 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
     // A tag already on the task stays pickable even if it left the list.
     final all = <String>{
       ...stored,
-      for (final tag in [..._pendingTags, ..._tags])
+      for (final tag in _tags)
         if (!stored.contains(tag)) tag,
     }.toList();
 
@@ -676,14 +650,15 @@ class _TaskEditorScreenState extends ConsumerState<TaskEditorScreen> {
                 selected: _tags.contains(tag),
                 onSelected: (on) => _toggleTag(tag, on),
               ),
-            BloopChoiceChip(
-              label: 'New tag',
-              icon: Icons.add,
-              selected: false,
-              onSelected: (_) => _newTag(),
-            ),
           ],
         ),
+        if (all.isEmpty)
+          Text(
+            'No tags yet. Create them in Settings.',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: tokens.muted),
+          ),
       ],
     );
   }
@@ -928,49 +903,6 @@ class _SectionLabel extends StatelessWidget {
           if (trailing != null) trailing!,
         ],
       ),
-    );
-  }
-}
-
-/// Asks for a tag name. Owns its controller so it outlives the dialog's exit
-/// animation.
-class _NewTagDialog extends StatefulWidget {
-  const _NewTagDialog();
-
-  @override
-  State<_NewTagDialog> createState() => _NewTagDialogState();
-}
-
-class _NewTagDialogState extends State<_NewTagDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('New tag'),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        decoration: const InputDecoration(labelText: 'Tag'),
-        textInputAction: TextInputAction.done,
-        onSubmitted: (value) => Navigator.pop(context, value.trim()),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Add'),
-        ),
-      ],
     );
   }
 }
