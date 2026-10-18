@@ -100,7 +100,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
                 },
               );
 
-              if (selectedTask != null && mounted) {
+              if (selectedTask != null && context.mounted) {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => TaskEditorScreen(task: selectedTask),

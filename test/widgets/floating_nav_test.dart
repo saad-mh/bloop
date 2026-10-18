@@ -108,11 +108,11 @@ void main() {
 
       expect(
         tester.getSemantics(find.text('Focus')),
-        containsSemantics(label: 'Focus', isButton: true, isSelected: true),
+        isSemantics(label: 'Focus', isButton: true, isSelected: true),
       );
       expect(
         tester.getSemantics(find.text('Tasks')),
-        isNot(containsSemantics(isSelected: true)),
+        isNot(isSemantics(isSelected: true)),
       );
       semantics.dispose();
     });
