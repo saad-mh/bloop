@@ -12,6 +12,7 @@ import '../../providers/tab_provider.dart';
 import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import '../widgets/floating_nav.dart';
+import '../widgets/permission_prompt.dart';
 import 'focus_controller.dart';
 
 class AppShell extends ConsumerStatefulWidget {
@@ -111,40 +112,31 @@ class _AppShellState extends ConsumerState<AppShell>
     }
 
     final step = _permissionSteps[_permissionStepIndex];
-    final dialogCopy = _dialogCopyForStep(step);
-    final shouldOpen = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Text(dialogCopy.title),
-        content: Text(dialogCopy.message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Not now'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(dialogCopy.confirmLabel),
-          ),
-        ],
-      ),
+    final shouldOpen = await showPermissionPrompt(
+      context,
+      kind: step.kind,
+      step: _permissionStepIndex + 1,
+      steps: _permissionSteps.length,
     );
 
     if (!mounted) return;
 
-    if (shouldOpen != true) {
+    if (!shouldOpen) {
       _waitingForReturn = false;
       await _advancePermissionFlow();
       return;
     }
 
-    _waitingForReturn = true;
     switch (step) {
       case _PermissionStep.notifications:
-        await NotificationService.instance.openNotificationSettings();
+        // The system's own dialog, so there is no settings page to come back
+        // from.
+        await NotificationService.instance.requestNotificationPermission();
+        if (!mounted) return;
+        await _advancePermissionFlow();
         break;
       case _PermissionStep.exactAlarm:
+        _waitingForReturn = true;
         await NotificationService.instance.requestExactAlarmPermission();
         break;
     }
@@ -162,24 +154,7 @@ class _AppShellState extends ConsumerState<AppShell>
     _permissionFlowStarted = false;
   }
 
-  _PermissionDialogCopy _dialogCopyForStep(_PermissionStep step) {
-    switch (step) {
-      case _PermissionStep.notifications:
-        return const _PermissionDialogCopy(
-          title: 'Enable notifications',
-          message:
-              'Bloop needs notification access so reminders can alert you on time. We will open system settings to turn it on.',
-          confirmLabel: 'Open settings',
-        );
-      case _PermissionStep.exactAlarm:
-        return const _PermissionDialogCopy(
-          title: 'Allow exact alarms',
-          message:
-              'Exact alarms let Bloop deliver reminders at the precise time. We will open system settings to enable it.',
-          confirmLabel: 'Open settings',
-        );
-    }
-  }
+
   void _selectTab(int i) {
     if (i == ref.read(selectedTabProvider)) return;
     HapticFeedback.selectionClick();
@@ -237,18 +212,10 @@ class _AppShellState extends ConsumerState<AppShell>
 }
 
 enum _PermissionStep {
-  notifications,
-  exactAlarm,
-}
+  notifications(PermissionKind.notifications),
+  exactAlarm(PermissionKind.exactAlarm);
 
-class _PermissionDialogCopy {
-  const _PermissionDialogCopy({
-    required this.title,
-    required this.message,
-    required this.confirmLabel,
-  });
+  const _PermissionStep(this.kind);
 
-  final String title;
-  final String message;
-  final String confirmLabel;
+  final PermissionKind kind;
 }
