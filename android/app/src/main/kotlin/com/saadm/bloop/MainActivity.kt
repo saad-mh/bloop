@@ -46,11 +46,6 @@ class MainActivity : FlutterActivity() {
 					}
 					"requestExactAlarm" -> {
 						try {
-							if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-								// Exact alarms need no special access before Android 12.
-								result.success(true)
-								return@setMethodCallHandler
-							}
 							// With the package URI the system opens Bloop's own toggle;
 							// without it the user lands on a list of every app.
 							val intent = Intent(
@@ -87,6 +82,9 @@ class MainActivity : FlutterActivity() {
 								if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
 									result.success(true)
 								} else {
+									// A second request replaces the first; answer the first now so
+									// its caller is not left waiting.
+									pendingPermissionResult?.success(false)
 									pendingPermissionResult = result
 									ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1001)
 									Log.d(CHANNEL, "requestNotificationPermission: requesting runtime permission")

@@ -40,16 +40,18 @@ const _copy = {
   PermissionKind.exactAlarm: _PromptCopy(
     icon: Icons.alarm,
     title: 'Right on the minute',
-    body: 'Without this, Android can hold reminders back.',
+    body: 'Android may otherwise delay reminders by a few minutes.',
     action: 'Allow exact timing',
     previewTitle: '4:00 PM',
-    previewDetail: 'Reminder lands at 4:00, not 4:07',
+    previewDetail: 'Reminder arrives at 4:00 sharp',
     previewIcon: Icons.schedule,
   ),
 };
 
 /// Asks about one permission in a bottom sheet. Resolves to true when the user
-/// taps the main button and false for "Not now" or any other way of closing it.
+/// taps the main button and false for "Not now". A stray tap, swipe or back
+/// press does not close it, so the one-time first-launch ask can't be lost by
+/// accident.
 ///
 /// [step] is 1-based; with more than one [steps] the sheet shows where the
 /// user is in the run.
@@ -62,6 +64,8 @@ Future<bool> showPermissionPrompt(
   final allowed = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
+    isDismissible: false,
+    enableDrag: false,
     useSafeArea: true,
     builder: (_) => PermissionPrompt(kind: kind, step: step, steps: steps),
   );
@@ -86,46 +90,55 @@ class PermissionPrompt extends StatelessWidget {
     final tokens = BloopTokens.of(context);
     final text = Theme.of(context).textTheme;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          BloopSpace.x6,
-          BloopSpace.x6,
-          BloopSpace.x6,
-          BloopSpace.x4,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (steps > 1) _StepDots(step: step, steps: steps),
-            const SizedBox(height: BloopSpace.x6),
-            Center(child: _IconRing(icon: copy.icon)),
-            const SizedBox(height: BloopSpace.x6),
-            Text(
-              copy.title,
-              textAlign: TextAlign.center,
-              style: text.headlineSmall,
-            ),
-            const SizedBox(height: BloopSpace.x2),
-            Text(
-              copy.body,
-              textAlign: TextAlign.center,
-              style: text.bodyMedium?.copyWith(color: tokens.muted),
-            ),
-            const SizedBox(height: BloopSpace.x6),
-            ExcludeSemantics(child: _Preview(copy: copy)),
-            const SizedBox(height: BloopSpace.x6),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(copy.action),
-            ),
-            const SizedBox(height: BloopSpace.x1),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Not now'),
-            ),
-          ],
+    return PopScope(
+      canPop: false,
+      child: SafeArea(
+        // Scrolls rather than overflows with large text or in landscape.
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            BloopSpace.x6,
+            BloopSpace.x6,
+            BloopSpace.x6,
+            BloopSpace.x4,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (steps > 1) ...[
+                _StepDots(step: step, steps: steps),
+                const SizedBox(height: BloopSpace.x6),
+              ],
+              Center(child: _IconRing(icon: copy.icon)),
+              const SizedBox(height: BloopSpace.x6),
+              Semantics(
+                header: true,
+                child: Text(
+                  copy.title,
+                  textAlign: TextAlign.center,
+                  style: text.headlineSmall,
+                ),
+              ),
+              const SizedBox(height: BloopSpace.x2),
+              Text(
+                copy.body,
+                textAlign: TextAlign.center,
+                style: text.bodyMedium?.copyWith(color: tokens.muted),
+              ),
+              const SizedBox(height: BloopSpace.x6),
+              ExcludeSemantics(child: _Preview(copy: copy)),
+              const SizedBox(height: BloopSpace.x6),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(copy.action),
+              ),
+              const SizedBox(height: BloopSpace.x1),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Not now'),
+              ),
+            ],
+          ),
         ),
       ),
     );

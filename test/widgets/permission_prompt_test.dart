@@ -64,11 +64,26 @@ void main() {
     expect(results, [false]);
   });
 
-  testWidgets('tapping outside the sheet resolves to false', (tester) async {
+  testWidgets('a stray tap or back press does not close it', (tester) async {
     final results = await open(tester, PermissionKind.notifications);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
-    expect(results, [false]);
+    expect(find.text('Allow notifications'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Allow notifications'), findsOneWidget);
+    expect(results, isEmpty);
+  });
+
+  testWidgets('scrolls instead of overflowing with large text', (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 2;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearAllTestValues);
+    await open(tester, PermissionKind.exactAlarm, steps: 2, step: 2);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('shows the step only when there is more than one', (

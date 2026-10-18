@@ -134,11 +134,16 @@ class _AppShellState extends ConsumerState<AppShell>
         await NotificationService.instance.requestNotificationPermission();
         if (!mounted) return;
         await _advancePermissionFlow();
-        break;
       case _PermissionStep.exactAlarm:
         _waitingForReturn = true;
-        await NotificationService.instance.requestExactAlarmPermission();
-        break;
+        final opened =
+            await NotificationService.instance.requestExactAlarmPermission();
+        // null means the settings page could not be opened, so there is
+        // nothing to come back from.
+        if (opened == null && mounted) {
+          _waitingForReturn = false;
+          await _advancePermissionFlow();
+        }
     }
   }
 
@@ -153,7 +158,6 @@ class _AppShellState extends ConsumerState<AppShell>
     await box.put(_permissionsOnboardingKey, true);
     _permissionFlowStarted = false;
   }
-
 
   void _selectTab(int i) {
     if (i == ref.read(selectedTabProvider)) return;
