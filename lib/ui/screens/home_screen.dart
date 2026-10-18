@@ -31,25 +31,34 @@ import 'task_editor_screen.dart';
 const double _headerButtonsWidth =
     2 * BloopSpace.x2 + 3 * kBloopMinTouchTarget + BloopSpace.x1;
 
+/// Smallest the greeting shrinks to before the header says "Tasks" instead.
+const double _minGreetingSize = 14;
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
-  /// The greeting, or plain "Tasks" when it wouldn't fit in [available]
-  /// (narrow phone, long name or large text size) and would be cut off.
-  String _headerTitle(BuildContext context, String userName, double available) {
-    final greeting = greetingFor(DateTime.now(), name: userName);
+  /// Largest headline size, in half-point steps down to [_minGreetingSize],
+  /// at which [greeting] fits in [available]; null when even that would be
+  /// cut off (narrow phone, long name or large text size).
+  double? _greetingSize(
+    BuildContext context,
+    String greeting,
+    TextStyle base,
+    double available,
+  ) {
     final painter = TextPainter(
-      text: TextSpan(
-        text: greeting,
-        style: Theme.of(context).textTheme.headlineMedium,
-      ),
+      text: TextSpan(text: greeting, style: base),
       textDirection: TextDirection.ltr,
       textScaler: MediaQuery.textScalerOf(context),
       maxLines: 1,
     )..layout();
-    final fits = painter.width <= available;
+    final width = painter.width;
     painter.dispose();
-    return fits ? greeting : 'Tasks';
+
+    // Width grows in step with the font size, so scale instead of searching.
+    final size = (base.fontSize! * available / width * 2).floorToDouble() / 2;
+    if (size < _minGreetingSize) return null;
+    return size > base.fontSize! ? base.fontSize! : size;
   }
 
   @override
@@ -81,37 +90,46 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           children: [
             LayoutBuilder(
-              builder: (context, constraints) => ScreenHeader(
-                title: _headerTitle(
+              builder: (context, constraints) {
+                final base = Theme.of(context).textTheme.headlineMedium!;
+                final greeting = greetingFor(DateTime.now(), name: userName);
+                final size = _greetingSize(
                   context,
-                  userName,
+                  greeting,
+                  base,
                   constraints.maxWidth - _headerButtonsWidth,
-                ),
-                leading: BloopIconButton(
-                  icon: LucideIcons.settings,
-                  tooltip: 'Settings',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  ),
-                ),
-                actions: [
-                  // TODO(#13): remove once Completed is a section of this list.
-                  BloopIconButton(
-                    icon: Icons.done_all,
-                    tooltip: 'Completed',
+                );
+                return ScreenHeader(
+                  title: size == null ? 'Tasks' : greeting,
+                  titleStyle: size == null
+                      ? null
+                      : base.copyWith(fontSize: size),
+                  leading: BloopIconButton(
+                    icon: LucideIcons.settings,
+                    tooltip: 'Settings',
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CompletedScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
                   ),
-                  BloopIconButton(
-                    icon: Icons.search,
-                    tooltip: 'Search',
-                    onPressed: () => _openSearch(context, ref),
-                  ),
-                ],
-              ),
+                  actions: [
+                    // TODO(#13): remove once Completed is a section of this list.
+                    BloopIconButton(
+                      icon: Icons.done_all,
+                      tooltip: 'Completed',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CompletedScreen(),
+                        ),
+                      ),
+                    ),
+                    BloopIconButton(
+                      icon: Icons.search,
+                      tooltip: 'Search',
+                      onPressed: () => _openSearch(context, ref),
+                    ),
+                  ],
+                );
+              },
             ),
             const _TagFilterRow(),
             Expanded(

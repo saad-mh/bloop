@@ -120,6 +120,31 @@ void main() {
     expect(find.textContaining('Good '), findsNothing);
   });
 
+  testWidgets('shrinks the greeting to the largest size that fits', (
+    tester,
+  ) async {
+    await pumpHome(tester, name: 'Mohammed', width: 600);
+
+    final greeting = find.textContaining(RegExp(r'^Good \w+, Mohammed$'));
+    final text = tester.widget<Text>(greeting);
+    final size = text.style!.fontSize!;
+    // The test font is 1em per glyph, so the text is length * size wide.
+    final available = 600 - 164;
+    expect(size, lessThan(24));
+    expect(size, greaterThanOrEqualTo(14));
+    expect(text.data!.length * size, lessThanOrEqualTo(available));
+    expect(text.data!.length * (size + 0.5), greaterThan(available));
+  });
+
+  testWidgets('keeps the full headline size when the greeting fits', (
+    tester,
+  ) async {
+    await pumpHome(tester);
+
+    final text = tester.widget<Text>(find.textContaining('Good '));
+    expect(text.style!.fontSize, 24);
+  });
+
   testWidgets('old title and filter menu are gone', (tester) async {
     await pumpHome(tester);
 
