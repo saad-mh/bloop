@@ -59,7 +59,9 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
     final allTodayComplete =
         todayTasks.isNotEmpty && completedToday == todayTasks.length;
     final showTodaySummary = todayTasks.isNotEmpty && completedToday > 0;
-    final textToShow = allTasks.isEmpty ? "You dont even have any tasks" : "No tasks completed yet";
+    final textToShow = allTasks.isEmpty
+        ? "You dont even have any tasks"
+        : "No tasks completed yet";
     if (allTodayComplete && !_playedForActiveSession) {
       _playedForActiveSession = true;
       _playConfetti();
@@ -75,10 +77,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
               final selectedTask = await tasksAsync.when(
                 data: (tasks) => showSearch<Task?>(
                   context: context,
-                  delegate: CompletedTaskSearchDelegate(
-                    tasks: tasks,
-                    ref: ref,
-                  ),
+                  delegate: CompletedTaskSearchDelegate(tasks: tasks, ref: ref),
                 ),
                 loading: () async {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -110,7 +109,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
             },
           ),
         ],
-        ),
+      ),
       body: Stack(
         children: [
           tasksAsync.when(
@@ -136,8 +135,9 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
                               allTodayComplete
                                   ? 'Good Job'
                                   : "Today's progress",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -181,7 +181,8 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(year2023: false,)),
+            loading: () =>
+                const Center(child: CircularProgressIndicator(year2023: false)),
             error: (e, _) => Center(child: Text('Error: $e')),
           ),
           Align(
@@ -201,10 +202,7 @@ class _CompletedScreenState extends ConsumerState<CompletedScreen> {
 }
 
 class CompletedTaskSearchDelegate extends SearchDelegate<Task?> {
-  CompletedTaskSearchDelegate({
-    required this.tasks,
-    required this.ref,
-  });
+  CompletedTaskSearchDelegate({required this.tasks, required this.ref});
 
   final List<Task> tasks;
   final WidgetRef ref;
