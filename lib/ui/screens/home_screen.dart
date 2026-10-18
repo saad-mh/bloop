@@ -15,6 +15,7 @@ import '../../utils/task_sections.dart';
 import '../theme/tokens.dart';
 import '../widgets/bloop_icon_button.dart';
 import '../widgets/choice_chip.dart';
+import '../widgets/example_task_confetti.dart';
 import '../widgets/floating_nav.dart';
 import '../widgets/screen_header.dart';
 import '../widgets/section_header.dart';
@@ -75,66 +76,69 @@ class HomeScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) => ScreenHeader(
-                title: _headerTitle(
-                  context,
-                  userName,
-                  constraints.maxWidth - _headerButtonsWidth,
-                ),
-                leading: BloopIconButton(
-                  icon: Icons.settings_outlined,
-                  tooltip: 'Settings',
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+      body: ExampleTaskConfetti(
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) => ScreenHeader(
+                  title: _headerTitle(
+                    context,
+                    userName,
+                    constraints.maxWidth - _headerButtonsWidth,
                   ),
-                ),
-                actions: [
-                  // TODO(#13): remove once Completed is a section of this list.
-                  BloopIconButton(
-                    icon: Icons.done_all,
-                    tooltip: 'Completed',
+                  leading: BloopIconButton(
+                    icon: Icons.settings_outlined,
+                    tooltip: 'Settings',
                     onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const CompletedScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     ),
                   ),
-                  BloopIconButton(
-                    icon: Icons.search,
-                    tooltip: 'Search',
-                    onPressed: () => _openSearch(context, ref),
-                  ),
-                ],
-              ),
-            ),
-            const _TagFilterRow(),
-            Expanded(
-              child: tasksAsync.when(
-                data: (tasks) {
-                  if (tasks.isEmpty) {
-                    return Center(
-                      child: Text(
-                        selectedTag != null
-                            ? 'No tasks tagged "$selectedTag"'
-                            : hasCompleted
-                            ? "You're all done!"
-                            : 'No tasks yet\nTap + to add your first one.',
-                        textAlign: TextAlign.center,
+                  actions: [
+                    // TODO(#13): remove once Completed is a section of this list.
+                    BloopIconButton(
+                      icon: Icons.done_all,
+                      tooltip: 'Completed',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CompletedScreen(),
+                        ),
                       ),
-                    );
-                  }
-                  return _SectionedTaskList(tasks: tasks);
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
+                    ),
+                    BloopIconButton(
+                      icon: Icons.search,
+                      tooltip: 'Search',
+                      onPressed: () => _openSearch(context, ref),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const _TagFilterRow(),
+              Expanded(
+                child: tasksAsync.when(
+                  data: (tasks) {
+                    if (tasks.isEmpty) {
+                      return Center(
+                        child: Text(
+                          selectedTag != null
+                              ? 'No tasks tagged "$selectedTag"'
+                              : hasCompleted
+                              ? "You're all done!"
+                              : 'No tasks yet\nTap + to add your first one.',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
+                    return _SectionedTaskList(tasks: tasks);
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('Error: $e')),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

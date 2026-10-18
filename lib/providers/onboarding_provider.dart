@@ -9,10 +9,11 @@ import 'task_provider.dart';
 
 /// True once first-run onboarding is done. `main.dart` shows onboarding until
 /// then and the normal shell after.
-final onboardingCompleteProvider =
-    StateNotifierProvider<OnboardingNotifier, bool>((ref) {
-      return OnboardingNotifier(ref);
-    });
+final onboardingProvider = StateNotifierProvider<OnboardingNotifier, bool>((
+  ref,
+) {
+  return OnboardingNotifier(ref);
+});
 
 /// Id of the example task onboarding left on Home; null once it has been
 /// completed or deleted. Completing it fires the confetti.
@@ -39,6 +40,15 @@ class OnboardingNotifier extends StateNotifier<bool> {
     } catch (_) {
       return true;
     }
+  }
+
+  /// Forgets the example task once it has been completed or deleted, so the
+  /// confetti can't fire for it again.
+  Future<void> clearExampleTask() async {
+    _ref.read(exampleTaskIdProvider.notifier).state = null;
+    try {
+      await _storage.setOnboardingExampleTaskId(null);
+    } catch (_) {}
   }
 
   /// Saves the [name] and [tags] the user chose, adds the example task and
