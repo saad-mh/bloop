@@ -143,7 +143,7 @@ class FocusForegroundTaskHandler extends TaskHandler {
   Future<void> _initNotifications() async {
     _plugin = FlutterLocalNotificationsPlugin();
     const initSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+      android: AndroidInitializationSettings('ic_stat_bloop'),
       iOS: DarwinInitializationSettings(),
     );
     await _plugin?.initialize(initSettings);

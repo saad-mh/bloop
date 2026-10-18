@@ -35,6 +35,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   build_runner: ^2.4.8
   hive_generator: ^2.0.1
+  flutter_native_splash: ^2.4.8
 
 flutter:
   uses-material-design: true
@@ -50,11 +51,22 @@ flutter:
       fonts:
         - asset: assets/fonts/WorkSans.ttf
 
+# Android icons (legacy, adaptive, themed, status bar) are rendered straight
+# into android/app/src/main/res by tool/render_icons.sh, because the adaptive
+# layers are drawn for the safe zone and this tool would inset them again.
+# This only produces the iOS icon set, from the opaque master.
 flutter_launcher_icons:
-  android: true
+  android: false
   ios: true
-  image_path: "assets/icons/app_icon.png"
+  image_path: "assets/icons/icon-master-1024.png"
+  remove_alpha_ios: true
 
-  # Android adaptive icon (recommended)
-  adaptive_icon_background: "#1E1E2E"
-  adaptive_icon_foreground: "assets/icons/app_icon.png"
+flutter_native_splash:
+  color: "#5a5fb0"
+  image: "assets/icons/splash-960.png"
+  android: true
+  ios: false
+  web: false
+  android_12:
+    color: "#5a5fb0"
+    image: "assets/icons/splash-960.png"

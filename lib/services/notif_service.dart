@@ -49,7 +49,7 @@ class NotifService {
     }
 
     // prep Android settings
-    const initSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettingsAndroid = AndroidInitializationSettings('ic_stat_bloop');
     
     // prep iOS settings
     const initSettingsiOS = DarwinInitializationSettings(
