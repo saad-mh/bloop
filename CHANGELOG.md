@@ -38,11 +38,12 @@ A full redesign. The 2.0 look is monochrome (grayscale and ink) in light and dar
 
 - Dark mode, large-text, 48dp touch targets, screen-reader labels and contrast checked across screens; subtle motion on section collapse and row expand.
 - The home greeting shrinks to the largest size that fits before falling back to "Tasks".
+- Import data now restores the tags your tasks use and schedules their reminders again; before, imported tasks had no reminders and their tags were missing from the tag list.
 - Fixed a stale Focus shell test and a few analyzer lints.
 
 ### Notes for upgrading
 
-- This release is signed with a new key. Android will refuse to install it over 1.0.x ("App not installed"). In 1.0.x use Settings > Export data (copies your tasks as JSON), paste it somewhere safe, uninstall 1.0.x, install 2.0.0, then use Import data. Future updates from 2.0.0 onwards install normally.
+- This release is signed with a new key. Android will refuse to install it over 1.0.x ("App not installed"). In 1.0.x use Settings > Export data (copies your tasks as JSON), paste it somewhere safe, uninstall 1.0.x, install 2.0.0, then use Settings > Advanced > Import data. Uninstalling deletes your tasks, so check the pasted export is saved before you uninstall. Import brings back your tasks, tags and reminders. Future updates from 2.0.0 onwards install normally.
 
 ## 1.0.5
 

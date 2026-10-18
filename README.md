@@ -109,7 +109,7 @@ If you picked one that doesn't fit your phone, Android says "App not compatible"
 
 Verify a download against `SHA256SUMS.txt` on the release page if you like.
 
-Updating from 1.x? 2.0.0 is signed with a new key, so Android won't install it over 1.x. Use Settings > Advanced > Export data in 1.x first, uninstall it, install 2.0.0, then use Import data.
+Updating from 1.x? 2.0.0 is signed with a new key, so Android won't install it over 1.x. Use Settings > Export data in 1.x first, uninstall it, install 2.0.0, then use Settings > Advanced > Import data. Uninstalling deletes your tasks, so paste the exported text into a note and check it is there before you uninstall. Import brings back your tasks, tags and reminders; you can skip the welcome steps on first launch.
 
 ---
 
